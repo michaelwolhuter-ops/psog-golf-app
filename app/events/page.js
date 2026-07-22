@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Flag, CheckCircle2, Clock, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Flag, CheckCircle2, Clock, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const typeLabel = {
   qualifier: 'Qualifier',
@@ -10,6 +10,7 @@ const typeLabel = {
 };
 
 export default function EventsPage() {
+  const router = useRouter();
   const [events, setEvents] = useState(null);
   const [qualification, setQualification] = useState([]);
   const [error, setError] = useState('');
@@ -147,91 +148,80 @@ export default function EventsPage() {
       {!events && !error && <p className="text-posgmuted">Loading…</p>}
 
       {events && (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
-          <table className="w-full text-sm">
-            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-              <tr>
-                <th className="px-4 py-3 w-14"></th>
-                <th className="px-4 py-3">Event</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Course</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Event Winners</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((e, i) => (
-                <tr
-                  key={e.id}
-                  className="border-b border-posgborder last:border-0 hover:bg-posgcardhover"
+        <div className="space-y-3 mb-8">
+          {events.map((e, i) => (
+            <div
+              key={e.id}
+              onClick={() => router.push(`/events/${e.id}`)}
+              className="group flex items-center gap-3 sm:gap-4 bg-posgcard rounded-xl border border-posgborder p-4 cursor-pointer transition hover:border-fairway/50 hover:bg-fairway/5"
+            >
+              <div
+                className="flex flex-col -my-1 shrink-0"
+                onClick={(evt) => evt.stopPropagation()}
+              >
+                <button
+                  onClick={() => moveEvent(i, -1)}
+                  disabled={i === 0}
+                  className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                  title="Move up"
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col -my-1">
-                      <button
-                        onClick={() => moveEvent(i, -1)}
-                        disabled={i === 0}
-                        className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                        title="Move up"
-                      >
-                        <ChevronUp size={14} />
-                      </button>
-                      <button
-                        onClick={() => moveEvent(i, 1)}
-                        disabled={i === events.length - 1}
-                        className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                        title="Move down"
-                      >
-                        <ChevronDown size={14} />
-                      </button>
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  onClick={() => moveEvent(i, 1)}
+                  disabled={i === events.length - 1}
+                  className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                  title="Move down"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-posgtext font-semibold group-hover:text-fairway transition">
+                    {e.name}
+                  </span>
+                  {e.status === 'completed' ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-fairway">
+                      <CheckCircle2 size={13} /> Completed
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-posgmuted">
+                      <Clock size={13} /> Upcoming
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-posgmuted mt-0.5">
+                  {typeLabel[e.event_type] || e.event_type} · {e.golf_course || 'Course TBC'} ·{' '}
+                  {e.event_date || 'Date TBC'}
+                </div>
+                {e.status === 'completed' &&
+                  (e.individual_winner ||
+                    (e.team_winner_names && e.team_winner_names.length > 0)) && (
+                    <div className="text-xs mt-1.5 space-y-0.5">
+                      {e.individual_winner && (
+                        <div>
+                          <span className="text-posgmuted">Ind: </span>
+                          <span className="text-posgtext">{e.individual_winner}</span>
+                        </div>
+                      )}
+                      {e.team_winner_names && e.team_winner_names.length > 0 && (
+                        <div>
+                          <span className="text-posgmuted">Team: </span>
+                          <span className="text-posgtext">{e.team_winner_names.join(', ')}</span>
+                        </div>
+                      )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/events/${e.id}`} className="text-posgtext hover:text-fairway">
-                      {e.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-posgmuted">
-                    {typeLabel[e.event_type] || e.event_type}
-                  </td>
-                  <td className="px-4 py-3 text-posgmuted">{e.golf_course || '—'}</td>
-                  <td className="px-4 py-3 text-posgmuted">{e.event_date || '—'}</td>
-                  <td className="px-4 py-3">
-                    {e.status === 'completed' ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-fairway">
-                        <CheckCircle2 size={14} /> Completed
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-posgmuted">
-                        <Clock size={14} /> Upcoming
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {e.status !== 'completed' ||
-                    (!e.individual_winner && (!e.team_winner_names || e.team_winner_names.length === 0)) ? (
-                      <span className="text-posgmuted">—</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {e.individual_winner && (
-                          <div>
-                            <span className="text-posgmuted">Ind: </span>
-                            <span className="text-posgtext">{e.individual_winner}</span>
-                          </div>
-                        )}
-                        {e.team_winner_names && e.team_winner_names.length > 0 && (
-                          <div>
-                            <span className="text-posgmuted">Team: </span>
-                            <span className="text-posgtext">{e.team_winner_names.join(', ')}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  )}
+              </div>
+
+              <ChevronRight
+                size={18}
+                className="text-posgmuted group-hover:text-fairway group-hover:translate-x-0.5 transition-transform shrink-0"
+              />
+            </div>
+          ))}
         </div>
       )}
 

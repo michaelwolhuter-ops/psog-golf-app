@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, UserCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Users, UserCircle2, ChevronRight } from 'lucide-react';
 
 function fmt(n) {
   if (n === null || n === undefined) return '—';
@@ -10,6 +11,7 @@ function fmt(n) {
 }
 
 export default function PlayersPage() {
+  const router = useRouter();
   const [players, setPlayers] = useState(null);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -118,23 +120,32 @@ export default function PlayersPage() {
                 <th className="px-4 py-3 text-right">Committee Adj</th>
                 <th className="px-4 py-3 text-right">Tour Handicap</th>
                 <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-2 py-3 w-8"></th>
               </tr>
             </thead>
             <tbody>
               {players.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-b border-posgborder last:border-0 hover:bg-posgcardhover"
+                  onClick={() => router.push(`/players/${p.id}`)}
+                  className="group border-b border-posgborder last:border-0 cursor-pointer transition hover:bg-fairway/10 active:bg-fairway/20"
                 >
                   <td className="px-4 py-3">
-                    <Link href={`/players/${p.id}`} className="flex items-center gap-2">
-                      <UserCircle2 size={20} className="text-posgmuted" />
-                      <div>
-                        <div className="text-posgtext hover:text-fairway">{p.name}</div>
+                    <Link
+                      href={`/players/${p.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-2 bg-posgbg border border-posgborder rounded-full pl-1.5 pr-3 py-1 hover:border-fairway/60 hover:bg-fairway/10 active:bg-fairway/20 transition"
+                    >
+                      <UserCircle2 size={20} className="text-posgmuted shrink-0" />
+                      <div className="text-left">
+                        <div className="text-posgtext font-medium leading-tight">{p.name}</div>
                         {p.nickname && (
-                          <div className="text-xs text-posgmuted">&quot;{p.nickname}&quot;</div>
+                          <div className="text-[11px] text-posgmuted leading-tight">
+                            &quot;{p.nickname}&quot;
+                          </div>
                         )}
                       </div>
+                      <ChevronRight size={14} className="text-posgmuted shrink-0" />
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-posgmuted">
@@ -160,6 +171,9 @@ export default function PlayersPage() {
                     >
                       {p.active ? 'Active' : 'Inactive'}
                     </span>
+                  </td>
+                  <td className="px-2 py-3 text-posgmuted group-hover:text-fairway group-hover:translate-x-0.5 transition-transform">
+                    <ChevronRight size={16} />
                   </td>
                 </tr>
               ))}
