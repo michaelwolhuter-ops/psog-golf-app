@@ -59,8 +59,8 @@ export default function EventsPage() {
 
   // Swaps sort_order with the neighbouring event so the list can be
   // reordered by hand — new events always get added to the end, this is how
-  // to move one back to where it actually belongs (e.g. "Round 2" slotting
-  // in between Round 1 and Round 3).
+  // to move one back to where it actually belongs (e.g. "Qualifier 2" slotting
+  // in between Qualifier 1 and Qualifier 3).
   async function moveEvent(index, direction) {
     const otherIndex = index + direction;
     if (otherIndex < 0 || otherIndex >= events.length) return;
@@ -115,7 +115,7 @@ export default function EventsPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-              placeholder="e.g. Round 5"
+              placeholder="e.g. Qualifier 5"
               autoFocus
             />
           </div>

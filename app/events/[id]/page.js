@@ -3,7 +3,19 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Flag, Save, Trash2, Plus, Users, Trophy, ArrowUpRight, Crosshair, Award } from 'lucide-react';
+import {
+  ArrowLeft,
+  Flag,
+  Save,
+  Trash2,
+  Plus,
+  Users,
+  Trophy,
+  ArrowUpRight,
+  Crosshair,
+  Award,
+  ClipboardEdit,
+} from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
 
@@ -29,6 +41,14 @@ export default function EventDetailPage() {
   const [savingMeta, setSavingMeta] = useState(false);
   const [resultsError, setResultsError] = useState('');
   const [metaError, setMetaError] = useState('');
+
+  // Closed by default so the page's resting state is just the read-only
+  // leaderboard — the "Enter Results" button below reveals the event
+  // details form, individual results table, and team results section, all
+  // together. This is a real UI toggle today (unlike HiddenLaterTag, which
+  // is only a label) — once real auth exists, this becomes an actual
+  // admin-only gate instead of something anyone can just click open.
+  const [entryOpen, setEntryOpen] = useState(false);
 
   const [teamFormOpen, setTeamFormOpen] = useState(false);
   const [teamPoints, setTeamPoints] = useState('');
@@ -291,17 +311,27 @@ export default function EventDetailPage() {
             {typeLabel[event.event_type] || event.event_type}
           </span>
         </div>
-        <button
-          onClick={deleteEvent}
-          className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
-        >
-          <Trash2 size={14} /> Delete event
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setEntryOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+          >
+            <ClipboardEdit size={14} /> {entryOpen ? 'Hide Entry' : 'Enter Results'}
+          </button>
+          <button
+            onClick={deleteEvent}
+            className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
+          >
+            <Trash2 size={14} /> Delete event
+          </button>
+        </div>
       </div>
       <p className="text-posgmuted mb-6">
         {enteredCount} of {players.length} players have a result recorded.
       </p>
 
+      {entryOpen && (
+      <>
       <form
         onSubmit={saveMeta}
         className="bg-posgcard rounded-xl border border-posgborder p-5 mb-8 grid sm:grid-cols-2 gap-4"
@@ -552,17 +582,34 @@ export default function EventDetailPage() {
         </div>
       )}
 
+      </>
+      )}
+
       {/* Read-only leaderboard for this event — individual + team side by side.
-          This is what regular (non-admin) users will see later, once the entry
-          forms above are hidden from anyone but the admin. */}
-      <div className="flex items-center gap-2 mt-10 mb-1">
+          This is the page's default view (entry forms above are collapsed
+          behind "Enter Results" until clicked). This is also what regular
+          (non-admin) users will see once real auth exists — the entry forms
+          above will be admin-only rather than just collapsed-by-default. */}
+      <div className="flex items-center gap-2 mt-8 mb-1">
         <Trophy size={20} className="text-gold" />
         <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
       </div>
-      <p className="text-xs text-posgmuted mb-4">
-        Read-only view of this event's results. This is what everyone will see once
-        score entry is admin-only — the tables above will be hidden from regular users.
+      <p className="text-xs text-posgmuted mb-2">
+        This event's results. Click &quot;Enter Results&quot; above to add or edit scores.
       </p>
+
+      {/* Key for the icons used in the Individual table below */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-posgmuted mb-4">
+        <span className="inline-flex items-center gap-1.5">
+          <ArrowUpRight size={13} className="text-fairway" /> Longest Drive
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Crosshair size={13} className="text-gold" /> Closest to the Pin
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Award size={13} className="text-posgmuted" /> Countback Win
+        </span>
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-6">
         <div>

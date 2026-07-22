@@ -7,8 +7,11 @@ import { createServerClient } from "@/lib/supabase/server";
 // so every route opts out of that cache the same way.
 export const dynamic = "force-dynamic";
 
-// Short column header for a per-event breakdown, e.g. "Round 1" -> "R1",
-// "Tour Day 2" -> "T2" (first letter of the name + its trailing number).
+// Short column header for a per-event breakdown, e.g. "Qualifier 1" -> "Q1",
+// "Tour Day 2" -> "T2" (first letter of the name + its trailing number) —
+// generic, not hardcoded to any particular event name, so this kept working
+// automatically when the qualifiers were renamed from "Round N" to
+// "Qualifier N" on 2026-07-22 (labels went from R1-R4 to Q1-Q4).
 function abbreviateEventName(name) {
   const num = (name.match(/(\d+)\s*$/) || [])[1] || "";
   const firstLetter = (name.trim().charAt(0) || "?").toUpperCase();
