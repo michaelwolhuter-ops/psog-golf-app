@@ -11,6 +11,7 @@ import {
   BarChart3,
   BookOpen,
   Settings as SettingsIcon,
+  X,
 } from "lucide-react";
 
 const links = [
@@ -24,19 +25,39 @@ const links = [
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
-export default function Sidebar() {
+// `open`/`onClose` only matter below the md breakpoint (mobile drawer).
+// On desktop the sidebar is always shown via the md:translate-x-0 /
+// md:static overrides below, exactly as it was before mobile support
+// was added — nothing here changes desktop appearance or behaviour.
+export default function Sidebar({ open = false, onClose = () => {} }) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 shrink-0 h-screen sticky top-0 bg-posgcard border-r border-posgborder flex flex-col">
-      <div className="px-5 py-6 border-b border-posgborder">
-        <div className="text-lg font-bold tracking-wide text-posgtext">
-          POSG <span className="text-gold">TOUR</span>
+    <aside
+      className={
+        "w-64 shrink-0 h-screen bg-posgcard border-r border-posgborder flex flex-col " +
+        "fixed top-0 left-0 z-50 transition-transform duration-200 ease-out " +
+        (open ? "translate-x-0" : "-translate-x-full") +
+        " md:translate-x-0 md:static md:sticky md:top-0"
+      }
+    >
+      <div className="px-5 py-6 border-b border-posgborder flex items-center justify-between">
+        <div>
+          <div className="text-lg font-bold tracking-wide text-posgtext">
+            POSG <span className="text-gold">TOUR</span>
+          </div>
+          <div className="text-xs text-posgmuted mt-0.5">Tour Manager</div>
         </div>
-        <div className="text-xs text-posgmuted mt-0.5">Tour Manager</div>
+        <button
+          onClick={onClose}
+          aria-label="Close menu"
+          className="md:hidden text-posgmuted hover:text-posgtext p-1"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {links.map((l) => {
           const Icon = l.icon;
           const active = pathname === l.href;
@@ -44,6 +65,7 @@ export default function Sidebar() {
             <Link
               key={l.href}
               href={l.href}
+              onClick={onClose}
               className={
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition " +
                 (active

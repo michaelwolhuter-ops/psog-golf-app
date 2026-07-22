@@ -134,7 +134,7 @@ export default function PlayerProfilePage() {
         <ArrowLeft size={14} /> All players
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <UserCircle2 size={56} className="text-posgmuted" />
           <div>
@@ -301,7 +301,7 @@ export default function PlayerProfilePage() {
         Tour Handicap above. Older rounds stay on record but stop counting once newer ones
         are added.
       </p>
-      <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden mb-3">
+      <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-3">
         <table className="w-full text-sm">
           <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
             <tr>
@@ -346,7 +346,7 @@ export default function PlayerProfilePage() {
         </table>
       </div>
 
-      <form onSubmit={addRound} className="flex items-end gap-3 mb-8">
+      <form onSubmit={addRound} className="flex flex-wrap items-end gap-3 mb-8">
         <div>
           <label className="block text-xs text-posgmuted mb-1">Score</label>
           <input
@@ -379,7 +379,7 @@ export default function PlayerProfilePage() {
       {results_history.length === 0 ? (
         <p className="text-posgmuted text-sm">No results recorded yet.</p>
       ) : (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden">
+        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
               <tr>

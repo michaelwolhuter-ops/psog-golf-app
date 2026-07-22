@@ -140,28 +140,30 @@ export default function DashboardPage() {
           {data.oom_top10.length === 0 ? (
             <p className="text-posgmuted text-sm">No results recorded yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="text-left text-posgmuted uppercase text-xs">
-                <tr>
-                  <th className="py-1.5 w-8">Pos</th>
-                  <th className="py-1.5">Player</th>
-                  <th className="py-1.5 text-right">Events</th>
-                  <th className="py-1.5 text-right">Pts</th>
-                  <th className="py-1.5 text-right w-16">Mvmt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.oom_top10.map((r) => (
-                  <tr key={r.player_id} className="border-t border-posgborder">
-                    <td className="py-1.5 font-bold text-posgtext">{r.position}</td>
-                    <td className="py-1.5 text-posgtext">{r.name}</td>
-                    <td className="py-1.5 text-right text-posgmuted">{r.events_played}</td>
-                    <td className="py-1.5 text-right font-mono text-posgtext">{r.total_points}</td>
-                    <td className="py-1.5 text-right"><Movement value={r.movement} /></td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-posgmuted uppercase text-xs">
+                  <tr>
+                    <th className="py-1.5 w-8">Pos</th>
+                    <th className="py-1.5">Player</th>
+                    <th className="py-1.5 text-right">Events</th>
+                    <th className="py-1.5 text-right">Pts</th>
+                    <th className="py-1.5 text-right w-16">Mvmt</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.oom_top10.map((r) => (
+                    <tr key={r.player_id} className="border-t border-posgborder">
+                      <td className="py-1.5 font-bold text-posgtext">{r.position}</td>
+                      <td className="py-1.5 text-posgtext">{r.name}</td>
+                      <td className="py-1.5 text-right text-posgmuted">{r.events_played}</td>
+                      <td className="py-1.5 text-right font-mono text-posgtext">{r.total_points}</td>
+                      <td className="py-1.5 text-right"><Movement value={r.movement} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

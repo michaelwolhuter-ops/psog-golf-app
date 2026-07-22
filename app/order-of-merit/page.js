@@ -101,7 +101,7 @@ export default function OrderOfMeritPage() {
           {rows.map((r) => (
             <div
               key={r.player_id}
-              className={`flex items-center gap-4 px-5 py-4 hover:bg-posgcardhover transition ${rowStyle(
+              className={`flex items-center gap-3 sm:gap-4 px-3 sm:px-5 py-3 sm:py-4 hover:bg-posgcardhover transition ${rowStyle(
                 r.position
               )}`}
             >

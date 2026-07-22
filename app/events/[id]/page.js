@@ -236,7 +236,7 @@ export default function EventDetailPage() {
         <ArrowLeft size={14} /> All events
       </Link>
 
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <Flag size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">{event.name}</h1>
@@ -325,7 +325,7 @@ export default function EventDetailPage() {
       </form>
 
       {/* Individual results — this is what feeds Order of Merit */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
           Results (individual — counts for Order of Merit) <HiddenLaterTag />
         </h2>
@@ -412,7 +412,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* Team results — separate from the above, never touches Order of Merit */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
           <Users size={17} className="text-gold" /> Team Results <HiddenLaterTag />
         </h2>
@@ -472,7 +472,7 @@ export default function EventDetailPage() {
       {teams.length === 0 ? (
         <p className="text-posgmuted text-sm">No teams recorded for this event yet.</p>
       ) : (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden">
+        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
               <tr>
@@ -532,7 +532,7 @@ export default function EventDetailPage() {
           {individualLeaderboard.length === 0 ? (
             <p className="text-posgmuted text-sm">No individual results yet.</p>
           ) : (
-            <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden">
+            <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
                   <tr>
@@ -589,7 +589,7 @@ export default function EventDetailPage() {
           {teamLeaderboard.length === 0 ? (
             <p className="text-posgmuted text-sm">No team results yet.</p>
           ) : (
-            <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden">
+            <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
                   <tr>

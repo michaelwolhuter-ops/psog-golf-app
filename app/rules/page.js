@@ -64,7 +64,7 @@ export default function RulesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <BookOpen size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Rules &amp; Information</h1>

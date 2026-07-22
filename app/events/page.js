@@ -87,7 +87,7 @@ export default function EventsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <Flag size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Events &amp; Results</h1>
@@ -147,7 +147,7 @@ export default function EventsPage() {
       {!events && !error && <p className="text-posgmuted">Loading…</p>}
 
       {events && (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-hidden mb-8">
+        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
           <table className="w-full text-sm">
             <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
               <tr>
