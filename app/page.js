@@ -53,7 +53,7 @@ export default function DashboardPage() {
   if (error) return <p className="text-red-400">{error}</p>;
   if (!data) return <p className="text-posgmuted">Loading…</p>;
 
-  const days = daysUntil(data.settings?.tour_start_date);
+  const daysToNextEvent = data.next_event ? daysUntil(data.next_event.event_date) : null;
 
   return (
     <div>
@@ -65,25 +65,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Top summary cards */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-posgcard rounded-xl border border-posgborder p-5">
-          <div className="text-xs text-posgmuted uppercase tracking-wide">Tour Countdown</div>
-          {days === null ? (
-            <div className="text-sm text-posgmuted mt-2">
-              Set tour dates in <Link href="/settings" className="text-fairway">Settings</Link>
-            </div>
-          ) : (
-            <>
-              <div className="text-3xl font-bold text-fairway mt-1">
-                {days >= 0 ? days : 0}
-              </div>
-              <div className="text-xs text-posgmuted">
-                {days >= 0 ? 'days to tour' : 'tour underway'}
-              </div>
-            </>
-          )}
-        </div>
-
+      <div className="grid sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-5">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Trophy size={13} /> Order of Merit Leader
@@ -109,6 +91,20 @@ export default function DashboardPage() {
                 {data.next_event.golf_course || 'Course TBC'}
                 {data.next_event.event_date ? ` · ${data.next_event.event_date}` : ''}
               </div>
+              {daysToNextEvent !== null && (
+                <>
+                  <div className="text-3xl font-bold text-fairway mt-2">
+                    {daysToNextEvent >= 0 ? daysToNextEvent : 0}
+                  </div>
+                  <div className="text-xs text-posgmuted">
+                    {daysToNextEvent > 0
+                      ? 'days away'
+                      : daysToNextEvent === 0
+                      ? "it's today"
+                      : 'underway'}
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <div className="text-sm text-posgmuted mt-2">Nothing scheduled</div>
