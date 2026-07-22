@@ -2,12 +2,37 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Flag, CheckCircle2, Clock, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Flag,
+  CheckCircle2,
+  Clock,
+  ChevronUp,
+  ChevronDown,
+  ChevronRight,
+  Trophy,
+  Users,
+} from 'lucide-react';
 
 const typeLabel = {
   qualifier: 'Qualifier',
   tour_day: 'Tour Day',
 };
+
+// Same generic "first letter + trailing number" abbreviation the Order of
+// Merit breakdown columns use (app/api/order-of-merit/route.js) — kept in
+// sync deliberately so "Qualifier 1" reads as Q1 everywhere in the app, not
+// just here. Not imported from there since that file is server-only.
+function badgeLabel(name) {
+  const num = (name.match(/(\d+)\s*$/) || [])[1] || '';
+  const firstLetter = (name.trim().charAt(0) || '?').toUpperCase();
+  return firstLetter + num;
+}
+
+function badgeStyle(eventType) {
+  return eventType === 'tour_day'
+    ? 'border-gold/50 bg-gold/10 text-gold'
+    : 'border-fairway/50 bg-fairway/10 text-fairway';
+}
 
 export default function EventsPage() {
   const router = useRouter();
@@ -86,6 +111,11 @@ export default function EventsPage() {
     .filter((q) => !q.qualified_for_tour)
     .filter((q) => q.qualifiers_attended > 0);
 
+  // The first "upcoming" event in sort order is the next thing on the
+  // calendar — same rule the Dashboard's Next Event card uses. Highlighted
+  // here so the list itself points you at what matters right now.
+  const nextEventId = events ? events.find((e) => e.status === 'upcoming')?.id : null;
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -100,9 +130,38 @@ export default function EventsPage() {
           {formOpen ? 'Cancel' : '+ Add event'}
         </button>
       </div>
-      <p className="text-posgmuted mb-6">
+      <p className="text-posgmuted mb-4">
         Four qualifiers, then Tour Day 1 and 2. Attend 2 of the 4 qualifiers to make tour.
       </p>
+
+      {/* Season roadmap — a quick-glance strip of every event in order.
+          Filled green = done, outlined = still to come, gold ring = tour
+          days. Purely visual, click a card below to actually open one. */}
+      {events && events.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1">
+          {events.map((e, i) => (
+            <div key={e.id} className="flex items-center gap-1.5 shrink-0">
+              <div
+                title={e.name}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-extrabold shrink-0 ${
+                  e.status === 'completed'
+                    ? 'border-fairway bg-fairway text-black'
+                    : badgeStyle(e.event_type) + ' bg-transparent'
+                }`}
+              >
+                {badgeLabel(e.name)}
+              </div>
+              {i < events.length - 1 && (
+                <div
+                  className={`w-4 sm:w-6 h-px shrink-0 ${
+                    e.status === 'completed' ? 'bg-fairway/50' : 'bg-posgborder'
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {formOpen && (
         <form
@@ -149,79 +208,98 @@ export default function EventsPage() {
 
       {events && (
         <div className="space-y-3 mb-8">
-          {events.map((e, i) => (
-            <div
-              key={e.id}
-              onClick={() => router.push(`/events/${e.id}`)}
-              className="group flex items-center gap-3 sm:gap-4 bg-posgcard rounded-xl border border-posgborder p-4 cursor-pointer transition hover:border-fairway/50 hover:bg-fairway/5"
-            >
+          {events.map((e, i) => {
+            const isNext = e.id === nextEventId;
+            return (
               <div
-                className="flex flex-col -my-1 shrink-0"
-                onClick={(evt) => evt.stopPropagation()}
+                key={e.id}
+                onClick={() => router.push(`/events/${e.id}`)}
+                className={`group relative flex items-center gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20 ${
+                  isNext
+                    ? 'border-gold/40 bg-gradient-to-r from-gold/10 via-posgcard to-posgcard hover:border-gold/70'
+                    : 'bg-posgcard border-posgborder hover:border-fairway/50 hover:bg-fairway/5'
+                }`}
               >
-                <button
-                  onClick={() => moveEvent(i, -1)}
-                  disabled={i === 0}
-                  className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                  title="Move up"
-                >
-                  <ChevronUp size={14} />
-                </button>
-                <button
-                  onClick={() => moveEvent(i, 1)}
-                  disabled={i === events.length - 1}
-                  className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                  title="Move down"
-                >
-                  <ChevronDown size={14} />
-                </button>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-posgtext font-semibold group-hover:text-fairway transition">
-                    {e.name}
+                {isNext && (
+                  <span className="absolute -top-2 left-4 sm:left-16 text-[10px] font-extrabold tracking-wide bg-gold text-black px-2 py-0.5 rounded-full">
+                    NEXT UP
                   </span>
-                  {e.status === 'completed' ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-fairway">
-                      <CheckCircle2 size={13} /> Completed
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs text-posgmuted">
-                      <Clock size={13} /> Upcoming
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-posgmuted mt-0.5">
-                  {typeLabel[e.event_type] || e.event_type} · {e.golf_course || 'Course TBC'} ·{' '}
-                  {e.event_date || 'Date TBC'}
-                </div>
-                {e.status === 'completed' &&
-                  (e.individual_winner ||
-                    (e.team_winner_names && e.team_winner_names.length > 0)) && (
-                    <div className="text-xs mt-1.5 space-y-0.5">
-                      {e.individual_winner && (
-                        <div>
-                          <span className="text-posgmuted">Ind: </span>
-                          <span className="text-posgtext">{e.individual_winner}</span>
-                        </div>
-                      )}
-                      {e.team_winner_names && e.team_winner_names.length > 0 && (
-                        <div>
-                          <span className="text-posgmuted">Team: </span>
-                          <span className="text-posgtext">{e.team_winner_names.join(', ')}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-              </div>
+                )}
 
-              <ChevronRight
-                size={18}
-                className="text-posgmuted group-hover:text-fairway group-hover:translate-x-0.5 transition-transform shrink-0"
-              />
-            </div>
-          ))}
+                <div
+                  className="flex flex-col -my-1 shrink-0"
+                  onClick={(evt) => evt.stopPropagation()}
+                >
+                  <button
+                    onClick={() => moveEvent(i, -1)}
+                    disabled={i === 0}
+                    className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                    title="Move up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => moveEvent(i, 1)}
+                    disabled={i === events.length - 1}
+                    className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                    title="Move down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+
+                <div
+                  className={`w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full border-2 flex items-center justify-center font-extrabold text-sm ${badgeStyle(
+                    e.event_type
+                  )}`}
+                >
+                  {badgeLabel(e.name)}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-posgtext font-bold text-lg group-hover:text-fairway transition">
+                      {e.name}
+                    </span>
+                    {e.status === 'completed' ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-fairway">
+                        <CheckCircle2 size={13} /> Completed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs text-posgmuted">
+                        <Clock size={13} /> Upcoming
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-posgmuted mt-0.5">
+                    {typeLabel[e.event_type] || e.event_type} · {e.golf_course || 'Course TBC'} ·{' '}
+                    {e.event_date || 'Date TBC'}
+                  </div>
+                  {e.status === 'completed' &&
+                    (e.individual_winner ||
+                      (e.team_winner_names && e.team_winner_names.length > 0)) && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-2 text-xs">
+                        {e.individual_winner && (
+                          <span className="inline-flex items-center gap-1 text-gold font-semibold">
+                            <Trophy size={13} /> {e.individual_winner}
+                          </span>
+                        )}
+                        {e.team_winner_names && e.team_winner_names.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-posgmuted">
+                            <Users size={13} /> {e.team_winner_names.join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                </div>
+
+                <ChevronRight
+                  size={20}
+                  className="text-posgmuted group-hover:text-fairway group-hover:translate-x-1 transition-transform shrink-0"
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 
