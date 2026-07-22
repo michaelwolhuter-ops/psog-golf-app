@@ -7,7 +7,7 @@ import {
   Users,
   Flag,
   Trophy,
-  Target,
+  // Target, // only used by the hidden Handicaps link below — re-add if it comes back
   BarChart3,
   BookOpen,
   Settings as SettingsIcon,
@@ -19,7 +19,12 @@ const links = [
   { href: "/players", label: "Players", icon: Users },
   { href: "/events", label: "Events & Results", icon: Flag },
   { href: "/order-of-merit", label: "Order of Merit", icon: Trophy },
-  { href: "/handicaps", label: "Handicaps", icon: Target },
+  // Hidden from nav 2026-07-22, per Mike — the handicap breakdown already
+  // lives on each player's own profile (Handicap section), so this separate
+  // page felt redundant for now. Nothing deleted: app/handicaps/page.js and
+  // its API route still work fine if linked to directly. Un-comment this
+  // line (and the Target import above) to bring it back to the sidebar.
+  // { href: "/handicaps", label: "Handicaps", icon: Target },
   { href: "/statistics", label: "Statistics", icon: BarChart3 },
   { href: "/rules", label: "Rules & Information", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: SettingsIcon },

@@ -61,6 +61,10 @@ export async function GET() {
     withHandicap.length > 0
       ? withHandicap.reduce((min, h) => (h.tour_handicap < min.tour_handicap ? h : min))
       : null;
+  const highestHandicap =
+    withHandicap.length > 0
+      ? withHandicap.reduce((max, h) => (h.tour_handicap > max.tour_handicap ? h : max))
+      : null;
 
   const withAdjustment = (handicaps || []).filter((h) => Number(h.committee_adjustment) !== 0);
   const largestAdjustment =
@@ -81,6 +85,7 @@ export async function GET() {
     latest_results: latestResults,
     handicap_summary: {
       lowest: lowestHandicap,
+      highest: highestHandicap,
       largest_adjustment: largestAdjustment,
     },
   });

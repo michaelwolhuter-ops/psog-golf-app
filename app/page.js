@@ -241,6 +241,14 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="flex items-center justify-between">
+              <span className="text-posgmuted">Highest Handicap</span>
+              <span className="text-posgtext">
+                {data.handicap_summary.highest
+                  ? `${data.handicap_summary.highest.name} (${fmt(data.handicap_summary.highest.tour_handicap)})`
+                  : '—'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
               <span className="text-posgmuted">Largest Committee Adj</span>
               <span className="text-posgtext">
                 {data.handicap_summary.largest_adjustment
