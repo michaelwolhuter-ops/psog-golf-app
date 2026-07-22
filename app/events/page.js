@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Trophy,
   Users,
+  ListOrdered,
 } from 'lucide-react';
 
 const typeLabel = {
@@ -39,6 +40,12 @@ export default function EventsPage() {
   const [events, setEvents] = useState(null);
   const [qualification, setQualification] = useState([]);
   const [error, setError] = useState('');
+
+  // Reorder chevrons are clutter on every card by default — this gates them
+  // behind an explicit "Edit Order" toggle instead, same idea as the event
+  // detail page's "Enter Results" toggle (collapsed by default, opened on
+  // demand, not yet a real permission since there's no auth).
+  const [reorderOpen, setReorderOpen] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState('');
@@ -123,12 +130,25 @@ export default function EventsPage() {
           <Flag size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Events &amp; Results</h1>
         </div>
-        <button
-          onClick={() => setFormOpen((v) => !v)}
-          className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
-        >
-          {formOpen ? 'Cancel' : '+ Add event'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setReorderOpen((v) => !v)}
+            className={
+              'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition ' +
+              (reorderOpen
+                ? 'bg-fairway/15 text-fairway'
+                : 'bg-posgborder text-posgtext hover:bg-posgcardhover')
+            }
+          >
+            <ListOrdered size={14} /> {reorderOpen ? 'Done' : 'Edit Order'}
+          </button>
+          <button
+            onClick={() => setFormOpen((v) => !v)}
+            className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
+          >
+            {formOpen ? 'Cancel' : '+ Add event'}
+          </button>
+        </div>
       </div>
       <p className="text-posgmuted mb-4">
         Four qualifiers, then Tour Day 1 and 2. Attend 2 of the 4 qualifiers to make tour.
@@ -221,32 +241,38 @@ export default function EventsPage() {
                 }`}
               >
                 {isNext && (
-                  <span className="absolute -top-2 left-4 sm:left-16 text-[10px] font-extrabold tracking-wide bg-gold text-black px-2 py-0.5 rounded-full">
+                  <span
+                    className={`absolute -top-2 text-[10px] font-extrabold tracking-wide bg-gold text-black px-2 py-0.5 rounded-full ${
+                      reorderOpen ? 'left-4 sm:left-16' : 'left-4 sm:left-5'
+                    }`}
+                  >
                     NEXT UP
                   </span>
                 )}
 
-                <div
-                  className="flex flex-col -my-1 shrink-0"
-                  onClick={(evt) => evt.stopPropagation()}
-                >
-                  <button
-                    onClick={() => moveEvent(i, -1)}
-                    disabled={i === 0}
-                    className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                    title="Move up"
+                {reorderOpen && (
+                  <div
+                    className="flex flex-col -my-1 shrink-0"
+                    onClick={(evt) => evt.stopPropagation()}
                   >
-                    <ChevronUp size={14} />
-                  </button>
-                  <button
-                    onClick={() => moveEvent(i, 1)}
-                    disabled={i === events.length - 1}
-                    className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                    title="Move down"
-                  >
-                    <ChevronDown size={14} />
-                  </button>
-                </div>
+                    <button
+                      onClick={() => moveEvent(i, -1)}
+                      disabled={i === 0}
+                      className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                      title="Move up"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => moveEvent(i, 1)}
+                      disabled={i === events.length - 1}
+                      className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                      title="Move down"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
 
                 <div
                   className={`w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full border-2 flex items-center justify-center font-extrabold text-sm ${badgeStyle(
