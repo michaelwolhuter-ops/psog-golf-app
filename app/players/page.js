@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Users, UserCircle2, ChevronRight } from 'lucide-react';
 
 function fmt(n) {
@@ -11,7 +10,6 @@ function fmt(n) {
 }
 
 export default function PlayersPage() {
-  const router = useRouter();
   const [players, setPlayers] = useState(null);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -110,81 +108,54 @@ export default function PlayersPage() {
       {!players && !error && <p className="text-posgmuted">Loading…</p>}
 
       {players && (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-              <tr>
-                <th className="px-4 py-3">Player</th>
-                <th className="px-4 py-3 text-right">Index</th>
-                <th className="px-4 py-3 text-right">Prediction</th>
-                <th className="px-4 py-3 text-right">Committee Adj</th>
-                <th className="px-4 py-3 text-right">Tour Handicap</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-2 py-3 w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => (
-                <tr
-                  key={p.id}
-                  onClick={() => router.push(`/players/${p.id}`)}
-                  className="group border-b border-posgborder last:border-0 cursor-pointer transition hover:bg-fairway/10 active:bg-fairway/20"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/players/${p.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-2 bg-posgbg border border-posgborder rounded-full pl-1.5 pr-3 py-1 hover:border-fairway/60 hover:bg-fairway/10 active:bg-fairway/20 transition"
-                    >
-                      <UserCircle2 size={20} className="text-posgmuted shrink-0" />
-                      <div className="text-left">
-                        <div className="text-posgtext font-medium leading-tight">{p.name}</div>
-                        {p.nickname && (
-                          <div className="text-[11px] text-posgmuted leading-tight">
-                            &quot;{p.nickname}&quot;
-                          </div>
-                        )}
-                      </div>
-                      <ChevronRight size={14} className="text-posgmuted shrink-0" />
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">
-                    {p.index ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">
-                    {p.handicap_prediction ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">
-                    {p.committee_adjustment}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-gold">
-                    {fmt(p.tour_handicap)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={
-                        'text-xs px-2 py-0.5 rounded-full ' +
-                        (p.active
-                          ? 'bg-fairway/15 text-fairway'
-                          : 'bg-posgborder text-posgmuted')
-                      }
-                    >
-                      {p.active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 text-posgmuted group-hover:text-fairway group-hover:translate-x-0.5 transition-transform">
-                    <ChevronRight size={16} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-posgcard rounded-2xl border border-posgborder overflow-hidden divide-y divide-posgborder">
+          {players.map((p) => (
+            <Link
+              key={p.id}
+              href={`/players/${p.id}`}
+              className={`group flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 hover:bg-posgcardhover transition ${
+                p.active ? '' : 'opacity-50'
+              }`}
+            >
+              <UserCircle2 size={38} className="text-posgmuted shrink-0" />
+
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-bold text-posgtext truncate">{p.name}</div>
+                {p.nickname && (
+                  <div className="text-xs text-posgmuted truncate">&quot;{p.nickname}&quot;</div>
+                )}
+              </div>
+
+              <span
+                className={
+                  'shrink-0 text-xs px-2 py-0.5 rounded-full ' +
+                  (p.active ? 'bg-fairway/15 text-fairway' : 'bg-posgborder text-posgmuted')
+                }
+              >
+                {p.active ? 'Active' : 'Inactive'}
+              </span>
+
+              <div className="shrink-0 text-right w-16">
+                <div className="text-2xl font-extrabold text-gold font-mono tabular-nums">
+                  {fmt(p.tour_handicap)}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider text-posgmuted mt-0.5">
+                  Hcp
+                </div>
+              </div>
+
+              <ChevronRight
+                size={18}
+                className="text-posgmuted shrink-0 group-hover:text-fairway group-hover:translate-x-0.5 transition-transform"
+              />
+            </Link>
+          ))}
         </div>
       )}
 
       <p className="text-xs text-posgmuted mt-4">
-        Click a player to open their profile — handicap, order of merit position, and full
-        results history. Photo upload and activate/deactivate editing come next.
+        Click a player to open their profile — handicap breakdown, order of merit position,
+        and full results history.
       </p>
     </div>
   );

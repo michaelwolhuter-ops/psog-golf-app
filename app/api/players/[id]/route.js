@@ -3,6 +3,104 @@ import { createServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+// Individual win = this player was the top-ranked result in a completed
+// event — same ranking rule as the Events list's Event Winners column
+// (points + LD/CTP bonuses, ties broken by countback_win). Team win = this
+// player was a member of the top-points team in a completed event's Team
+// Results. Matched by player_id throughout, never by name, per the app's
+// canonical-player rule (name spellings aren't reliable, ids are).
+async function getPlayerWinCounts(supabase, playerId) {
+  const [{ data: allResults }, { data: allTeams }] = await Promise.all([
+    supabase
+      .from("event_results")
+      .select(
+        "event_id, player_id, points, longest_drive, closest_to_pin, countback_win, events!inner(status)"
+      )
+      .eq("events.status", "completed"),
+    supabase
+      .from("event_teams")
+      .select("id, event_id, points, event_team_members(player_id), events!inner(status)")
+      .eq("events.status", "completed"),
+  ]);
+
+  const resultsByEvent = {};
+  (allResults || []).forEach((r) => {
+    (resultsByEvent[r.event_id] ||= []).push(r);
+  });
+  let individual = 0;
+  Object.values(resultsByEvent).forEach((group) => {
+    const ranked = group
+      .filter((r) => r.points !== null && r.points !== undefined)
+      .map((r) => ({
+        player_id: r.player_id,
+        overall: Number(r.points) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
+        countback_win: r.countback_win,
+      }))
+      .sort((a, b) => {
+        if (b.overall !== a.overall) return b.overall - a.overall;
+        return (b.countback_win ? 1 : 0) - (a.countback_win ? 1 : 0);
+      });
+    if (ranked.length > 0 && ranked[0].player_id === playerId) individual += 1;
+  });
+
+  const teamsByEvent = {};
+  (allTeams || []).forEach((t) => {
+    (teamsByEvent[t.event_id] ||= []).push(t);
+  });
+  let team = 0;
+  Object.values(teamsByEvent).forEach((group) => {
+    const ranked = group
+      .filter((t) => t.points !== null && t.points !== undefined)
+      .sort((a, b) => Number(b.points) - Number(a.points));
+    if (ranked.length > 0) {
+      const memberIds = (ranked[0].event_team_members || []).map((m) => m.player_id);
+      if (memberIds.includes(playerId)) team += 1;
+    }
+  });
+
+  return { individual, team };
+}
+
+// Position this player finished in each event, matching the exact same
+// ranking rule as the Events page's own Event Leaderboard (individual
+// leaderboard in app/events/[id]/page.js): sort by points + LD/CTP bonuses,
+// tiebreak by countback_win, then position = sorted index + 1. This is
+// sequential, not competition-style shared ranks (Order of Merit uses a
+// different, always-unique ranking with more tiebreak criteria available —
+// see the player_handicaps/order_of_merit views). A genuine unresolved tie
+// on points with no countback entered gets an arbitrary but stable order —
+// same known limitation already flagged for Wins/Event Winners in memory.md.
+async function getEventPositions(supabase) {
+  const { data: allResults } = await supabase
+    .from("event_results")
+    .select("event_id, player_id, points, longest_drive, closest_to_pin, countback_win");
+
+  const byEvent = {};
+  (allResults || []).forEach((r) => {
+    (byEvent[r.event_id] ||= []).push(r);
+  });
+
+  const positionByKey = {};
+  Object.entries(byEvent).forEach(([eventId, group]) => {
+    const ranked = group
+      .filter((r) => r.points !== null && r.points !== undefined)
+      .map((r) => ({
+        player_id: r.player_id,
+        overall: Number(r.points) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
+        countback_win: r.countback_win,
+      }))
+      .sort((a, b) => {
+        if (b.overall !== a.overall) return b.overall - a.overall;
+        return (b.countback_win ? 1 : 0) - (a.countback_win ? 1 : 0);
+      });
+    ranked.forEach((r, i) => {
+      positionByKey[`${eventId}|${r.player_id}`] = i + 1;
+    });
+  });
+
+  return positionByKey;
+}
+
 export async function GET(request, { params }) {
   const supabase = createServerClient();
   const { id } = params;
@@ -17,7 +115,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "Player not found" }, { status: 404 });
   }
 
-  const [{ data: handicap }, { data: oom }, { data: qualification }, { data: results }, { data: rounds }] =
+  const [{ data: handicap }, { data: oom }, { data: qualification }, { data: results }, { data: rounds }, wins, eventPositions] =
     await Promise.all([
       supabase.from("player_handicaps").select("*").eq("id", id).single(),
       supabase.from("order_of_merit").select("*").eq("player_id", id).single(),
@@ -32,6 +130,8 @@ export async function GET(request, { params }) {
         .eq("player_id", id)
         .order("round_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }),
+      getPlayerWinCounts(supabase, id),
+      getEventPositions(supabase),
     ]);
 
   // Mark the rounds that actually feed the handicap average — same "last 5,
@@ -54,6 +154,7 @@ export async function GET(request, { params }) {
       points: r.points,
       longest_drive: r.longest_drive,
       closest_to_pin: r.closest_to_pin,
+      position: eventPositions?.[`${r.events?.id}|${id}`] ?? null,
       overall:
         (r.points || 0) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
     }))
@@ -68,6 +169,7 @@ export async function GET(request, { params }) {
     qualification: qualification || null,
     results_history: resultsHistory,
     rounds: roundsWithFlag,
+    wins: wins || { individual: 0, team: 0 },
   });
 }
 

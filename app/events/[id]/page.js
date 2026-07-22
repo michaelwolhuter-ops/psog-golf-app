@@ -68,6 +68,46 @@ export default function EventDetailPage() {
     setForm((f) => ({ ...f, [playerId]: { ...f[playerId], [field]: value } }));
   }
 
+  // Countback, Longest Drive and Closest to the Pin all save themselves
+  // immediately on click, rather than waiting for the batch "Save results"
+  // button — these are quick tick-and-move-on calls made while walking the
+  // table, and it's easy to tick one then get pulled away before hitting
+  // Save, silently losing it (this is exactly what happened with countback).
+  // Points stays batch-only, since that's typed entry across the whole
+  // table that naturally ends with one deliberate "Save results" click.
+  async function saveResultField(playerId, field, value) {
+    setField(playerId, field, value);
+    const v = form[playerId] || {};
+    if (v.points === '' || v.points === null || v.points === undefined) {
+      // No points entered yet for this player — nothing meaningful to save
+      // until they have a score on record.
+      return;
+    }
+    setResultsError('');
+    const res = await fetch(`/api/events/${id}/results`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        results: [
+          {
+            player_id: playerId,
+            points: v.points,
+            longest_drive: field === 'longest_drive' ? value : v.longest_drive,
+            closest_to_pin: field === 'closest_to_pin' ? value : v.closest_to_pin,
+            countback_win: field === 'countback_win' ? value : v.countback_win,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setResultsError(body.error || `Save failed (${res.status}) — reverted.`);
+      load(); // pull back the real saved state rather than leave a lie on screen
+      return;
+    }
+    setSavedAt(new Date());
+  }
+
   async function saveResults() {
     setSaving(true);
     setResultsError('');
@@ -373,7 +413,7 @@ export default function EventDetailPage() {
                   <input
                     type="checkbox"
                     checked={!!form[p.id]?.longest_drive}
-                    onChange={(e) => setField(p.id, 'longest_drive', e.target.checked)}
+                    onChange={(e) => saveResultField(p.id, 'longest_drive', e.target.checked)}
                     className="accent-fairway w-4 h-4"
                   />
                 </td>
@@ -381,7 +421,7 @@ export default function EventDetailPage() {
                   <input
                     type="checkbox"
                     checked={!!form[p.id]?.closest_to_pin}
-                    onChange={(e) => setField(p.id, 'closest_to_pin', e.target.checked)}
+                    onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
                     className="accent-fairway w-4 h-4"
                   />
                 </td>
@@ -389,7 +429,7 @@ export default function EventDetailPage() {
                   <input
                     type="checkbox"
                     checked={!!form[p.id]?.countback_win}
-                    onChange={(e) => setField(p.id, 'countback_win', e.target.checked)}
+                    onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
                     className="accent-gold w-4 h-4"
                     title="Tick if the committee decided this player wins a tie on points"
                   />
