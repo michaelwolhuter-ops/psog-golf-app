@@ -107,6 +107,16 @@ export default function PlayersPage() {
       {error && <p className="text-red-400">{error}</p>}
       {!players && !error && <p className="text-posgmuted">Loading…</p>}
 
+      {players && players.length > 0 && (
+        <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 pb-2 text-[11px] uppercase tracking-wide text-posgmuted">
+          <div className="w-[38px] shrink-0" />
+          <div className="flex-1">Player</div>
+          <div className="shrink-0">Status</div>
+          <div className="shrink-0 w-16 text-right">Tour Hcp</div>
+          <div className="w-[18px] shrink-0" />
+        </div>
+      )}
+
       {players && (
         <div className="bg-posgcard rounded-2xl border border-posgborder overflow-hidden divide-y divide-posgborder">
           {players.map((p) => (
