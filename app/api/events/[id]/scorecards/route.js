@@ -82,10 +82,22 @@ export async function POST(request, { params }) {
     return NextResponse.json({ error: scError.message }, { status: 500 });
   }
 
+  // Snapshot each player's Tour Handicap right now, at the moment this
+  // round starts, and store it on the scorecard. This is what locks the
+  // round: strokes/points/Net are computed from this frozen number for the
+  // rest of this scorecard's life, never the live (possibly later
+  // recalculated) handicap — see /lib/scoring and the holes route.
+  const { data: handicaps } = await supabase
+    .from("player_handicaps")
+    .select("id, tour_handicap")
+    .in("id", playerIds);
+  const handicapById = Object.fromEntries((handicaps || []).map((h) => [h.id, h.tour_handicap]));
+
   const playerRows = playerIds.map((pid) => ({
     scorecard_id: scorecard.id,
     player_id: pid,
     team_number: format === "individual_stableford" ? null : teamNumbers[pid],
+    tour_handicap: handicapById[pid] ?? 0,
   }));
 
   const { error: playersError } = await supabase.from("scorecard_players").insert(playerRows);

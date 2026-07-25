@@ -7,9 +7,11 @@ export const dynamic = "force-dynamic";
 // Saves every player's score for one hole at once (the marker enters the
 // whole group's hole together, not one player at a time). Strokes received
 // and stableford points are computed here, server-side, off the hole's real
-// par/stroke index and each player's actual Tour Handicap — never trusted
-// from the client — so the numbers can't drift if a handicap changes or the
-// client sends something stale.
+// par/stroke index and each player's Tour Handicap as it was LOCKED onto
+// this scorecard when the round started (scorecard_players.tour_handicap)
+// — never the live handicap, and never trusted from the client — so the
+// numbers can't drift if a handicap changes mid-round, later, or the client
+// sends something stale.
 export async function POST(request, { params }) {
   const supabase = createServerClient();
   const { id } = params;
@@ -50,11 +52,14 @@ export async function POST(request, { params }) {
   }
 
   const playerIds = scores.map((s) => s.player_id);
-  const { data: handicaps } = await supabase
-    .from("player_handicaps")
-    .select("id, tour_handicap")
-    .in("id", playerIds);
-  const handicapById = Object.fromEntries((handicaps || []).map((h) => [h.id, h.tour_handicap]));
+  const { data: scorecardPlayers } = await supabase
+    .from("scorecard_players")
+    .select("player_id, tour_handicap")
+    .eq("scorecard_id", id)
+    .in("player_id", playerIds);
+  const handicapById = Object.fromEntries(
+    (scorecardPlayers || []).map((sp) => [sp.player_id, sp.tour_handicap])
+  );
 
   const rows = scores.map((s) => {
     const strokes = strokesReceived(handicapById[s.player_id] ?? 0, hole.stroke_index);

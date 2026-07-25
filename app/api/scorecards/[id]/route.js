@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
       supabase.from("courses").select("*, holes(*)").eq("id", scorecard.course_id).single(),
       supabase
         .from("scorecard_players")
-        .select("player_id, team_number, players(id, name)")
+        .select("player_id, team_number, tour_handicap, players(id, name)")
         .eq("scorecard_id", id),
       supabase.from("hole_scores").select("*").eq("scorecard_id", id),
       supabase.from("match_results").select("*").eq("scorecard_id", id).maybeSingle(),
@@ -36,20 +36,17 @@ export async function GET(request, { params }) {
     course.holes = (course.holes || []).sort((a, b) => a.hole_number - b.hole_number);
   }
 
-  // Tour Handicap per player, needed client-side for stroke allocation —
-  // pulled from the same view every other handicap display in the app uses.
-  const playerIds = (scorecardPlayers || []).map((sp) => sp.player_id);
-  const { data: handicaps } = await supabase
-    .from("player_handicaps")
-    .select("id, tour_handicap")
-    .in("id", playerIds.length ? playerIds : ["00000000-0000-0000-0000-000000000000"]);
-  const handicapById = Object.fromEntries((handicaps || []).map((h) => [h.id, h.tour_handicap]));
-
+  // Tour Handicap per player — the value locked onto scorecard_players when
+  // this round was created, NOT a live lookup. This is what keeps a played
+  // round's strokes/Net/HCP display frozen even if handicaps get
+  // recalculated afterward. (Rounds created before this locking existed
+  // were backfilled with the handicap at backfill time — see migration
+  // add_locked_tour_handicap_to_scorecard_players.)
   const players = (scorecardPlayers || []).map((sp) => ({
     id: sp.player_id,
     name: sp.players?.name,
     team_number: sp.team_number,
-    tour_handicap: handicapById[sp.player_id] ?? 0,
+    tour_handicap: sp.tour_handicap ?? 0,
   }));
 
   return NextResponse.json({
