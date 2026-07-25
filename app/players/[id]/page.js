@@ -20,11 +20,23 @@ import {
   Plus,
   Check,
   X,
+  Swords,
 } from 'lucide-react';
+import { roundHandicapForStrokes } from '@/lib/scoring';
 
 function fmt(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toFixed(1);
+}
+
+// Tour Handicap specifically shows the rounded whole number, not the raw
+// decimal — same rounding rule strokesReceived() actually uses on the
+// course, so what's displayed here never disagrees with what a player
+// actually gets on a hole. Index/Prediction/Differential stay as decimals
+// via fmt() above — those are inputs, not the number driving strokes.
+function fmtHcp(n) {
+  const r = roundHandicapForStrokes(n);
+  return r === null ? '—' : String(r);
 }
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
@@ -167,7 +179,7 @@ export default function PlayerProfilePage() {
 
   if (!data) return <p className="text-posgmuted">Loading…</p>;
 
-  const { player, handicap, oom_position, oom_total_points, qualification, results_history, rounds, wins } = data;
+  const { player, handicap, oom_position, oom_total_points, qualification, results_history, rounds, wins, match_record } = data;
 
   // Players either have an official Index (subscription app) or, until they
   // get one, a Committee Handicap the committee sets manually — never both
@@ -300,13 +312,13 @@ export default function PlayerProfilePage() {
 
       {/* ================= Section 1: player info & stats ================= */}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Target size={13} /> Tour Handicap
           </div>
           <div className="text-2xl font-bold text-gold mt-1">
-            {fmt(handicap?.tour_handicap)}
+            {fmtHcp(handicap?.tour_handicap)}
           </div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
@@ -360,6 +372,15 @@ export default function PlayerProfilePage() {
             <Crosshair size={13} /> Closest to the Pin
           </div>
           <div className="text-2xl font-bold text-posgtext mt-1">{closestToPinCount}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Swords size={13} /> Match Record
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
+          </div>
+          <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
         </div>
       </div>
 
@@ -495,7 +516,7 @@ export default function PlayerProfilePage() {
             <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
               <Target size={13} /> Tour Handicap
             </div>
-            <div className="text-2xl font-bold text-gold mt-1">{fmt(handicap?.tour_handicap)}</div>
+            <div className="text-2xl font-bold text-gold mt-1">{fmtHcp(handicap?.tour_handicap)}</div>
             <p className="text-[11px] text-posgmuted mt-1">(Index or Committee Handicap + Average Round Index) ÷ 2, plus Committee Adjustment.</p>
           </div>
         </div>

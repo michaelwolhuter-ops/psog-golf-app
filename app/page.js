@@ -15,6 +15,7 @@ import {
   ClipboardEdit,
   Settings as SettingsIcon,
 } from 'lucide-react';
+import { roundHandicapForStrokes } from '@/lib/scoring';
 
 function daysUntil(dateStr) {
   if (!dateStr) return null;
@@ -28,6 +29,13 @@ function daysUntil(dateStr) {
 function fmt(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toFixed(1);
+}
+
+// Tour Handicap shows the rounded whole number here — same rule
+// strokesReceived() uses on the course — not the raw decimal.
+function fmtHcp(n) {
+  const r = roundHandicapForStrokes(n);
+  return r === null ? '—' : String(r);
 }
 
 function Movement({ value }) {
@@ -236,7 +244,7 @@ export default function DashboardPage() {
               <span className="text-posgmuted">Lowest Handicap</span>
               <span className="text-posgtext">
                 {data.handicap_summary.lowest
-                  ? `${data.handicap_summary.lowest.name} (${fmt(data.handicap_summary.lowest.tour_handicap)})`
+                  ? `${data.handicap_summary.lowest.name} (${fmtHcp(data.handicap_summary.lowest.tour_handicap)})`
                   : '—'}
               </span>
             </div>
@@ -244,7 +252,7 @@ export default function DashboardPage() {
               <span className="text-posgmuted">Highest Handicap</span>
               <span className="text-posgtext">
                 {data.handicap_summary.highest
-                  ? `${data.handicap_summary.highest.name} (${fmt(data.handicap_summary.highest.tour_handicap)})`
+                  ? `${data.handicap_summary.highest.name} (${fmtHcp(data.handicap_summary.highest.tour_handicap)})`
                   : '—'}
               </span>
             </div>

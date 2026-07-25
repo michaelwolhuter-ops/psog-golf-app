@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { Target } from 'lucide-react';
+import { roundHandicapForStrokes } from '@/lib/scoring';
 
 function fmt(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toFixed(1);
+}
+
+// Tour Handicap column specifically shows the rounded whole number — same
+// rule strokesReceived() uses on the course. Index/Prediction/Avg/
+// Differential stay as decimals via fmt() above, since those are inputs.
+function fmtHcp(n) {
+  const r = roundHandicapForStrokes(n);
+  return r === null ? '—' : String(r);
 }
 
 export default function HandicapsPage() {
@@ -68,7 +77,7 @@ export default function HandicapsPage() {
                     {r.committee_adjustment}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold text-gold">
-                    {fmt(r.tour_handicap)}
+                    {fmtHcp(r.tour_handicap)}
                   </td>
                 </tr>
               ))}

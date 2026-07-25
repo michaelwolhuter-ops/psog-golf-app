@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import ScorecardsSection from './ScorecardsSection';
 import {
   ArrowLeft,
   Flag,
@@ -15,6 +16,7 @@ import {
   Crosshair,
   Award,
   ClipboardEdit,
+  ClipboardList,
 } from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
@@ -33,6 +35,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState(null);
   const [players, setPlayers] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [courses, setCourses] = useState([]);
   const [form, setForm] = useState({}); // player_id -> { points, longest_drive, closest_to_pin }
   const [meta, setMeta] = useState({});
   const [error, setError] = useState('');
@@ -49,6 +52,15 @@ export default function EventDetailPage() {
   // is only a label) — once real auth exists, this becomes an actual
   // admin-only gate instead of something anyone can just click open.
   const [entryOpen, setEntryOpen] = useState(false);
+
+  // Separate, smaller toggle from "Enter Results" — for the two formats
+  // (LD/CTP/Countback) that a digital scorecard can never capture on its
+  // own, since it only knows gross/net/points. Positioned between the
+  // Scorecards section and the Event Leaderboard so it's usable without
+  // opening the full manual entry form (which also has a Points field that
+  // shouldn't be touched for a player whose points already came from a
+  // completed scorecard).
+  const [bonusOpen, setBonusOpen] = useState(false);
 
   const [teamFormOpen, setTeamFormOpen] = useState(false);
   const [teamPoints, setTeamPoints] = useState('');
@@ -84,8 +96,30 @@ export default function EventDetailPage() {
 
   useEffect(load, [id]);
 
+  // Course list for the picker — separate from the event itself, loaded
+  // once. Courses are a shared library (Noodsburg etc.), not per-event data.
+  useEffect(() => {
+    fetch('/api/courses', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((body) => setCourses(body.data || []));
+  }, []);
+
   function setField(playerId, field, value) {
     setForm((f) => ({ ...f, [playerId]: { ...f[playerId], [field]: value } }));
+  }
+
+  // Picking a saved course sets course_id (which will eventually link this
+  // event to real hole-by-hole data for the scorecard) and auto-fills the
+  // existing free-text golf_course field with the course name, so every
+  // other page that just displays event.golf_course keeps working untouched.
+  // "— Type manually —" clears course_id but leaves the text field alone.
+  function selectCourse(courseId) {
+    if (!courseId) {
+      setMeta((m) => ({ ...m, course_id: null }));
+      return;
+    }
+    const course = courses.find((c) => c.id === courseId);
+    setMeta((m) => ({ ...m, course_id: courseId, golf_course: course ? course.name : m.golf_course }));
   }
 
   // Countback, Longest Drive and Closest to the Pin all save themselves
@@ -312,6 +346,13 @@ export default function EventDetailPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/events/${id}/scorecard/new`}
+            className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-1.5 rounded-md hover:bg-fairway/25 transition"
+            title="Digital hole-by-hole scorecard — feeds results in automatically once completed"
+          >
+            <ClipboardList size={14} /> New Scorecard
+          </Link>
           <button
             onClick={() => setEntryOpen((v) => !v)}
             className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
@@ -346,12 +387,45 @@ export default function EventDetailPage() {
           />
         </div>
         <div>
-          <label className="block text-xs text-posgmuted mb-1">Golf course</label>
+          <label className="block text-xs text-posgmuted mb-1">Course</label>
+          <select
+            value={meta.course_id || ''}
+            onChange={(e) => selectCourse(e.target.value)}
+            className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext mb-1.5"
+          >
+            <option value="">— Type course name manually —</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {meta.course_id ? (
+            <>
+              {/* Locked to whichever course is picked — always derived live
+                  from the courses list + meta.course_id, never a
+                  separately-typed copy that could go stale or show blank
+                  while a course is set. */}
+              <input
+                value={courses.find((c) => c.id === meta.course_id)?.name || ''}
+                readOnly
+                className="w-full bg-posgbg/50 border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgmuted cursor-not-allowed mb-1.5"
+              />
+              <Link
+                href={`/courses/${meta.course_id}`}
+                className="text-xs text-fairway hover:underline"
+              >
+                View scorecard →
+              </Link>
+            </>
+          ) : (
           <input
             value={meta.golf_course || ''}
             onChange={(e) => setMeta({ ...meta, golf_course: e.target.value })}
+            placeholder="Golf course name"
             className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
           />
+          )}
         </div>
         <div>
           <label className="block text-xs text-posgmuted mb-1">Format</label>
@@ -585,6 +659,89 @@ export default function EventDetailPage() {
       </>
       )}
 
+      {/* The actual played scorecards for this event, hole by hole — separate
+          from (and shown above) the results leaderboard below, per Mike's
+          request: see the real card first, the summary standings after. */}
+      <ScorecardsSection eventId={id} />
+
+      {/* Longest Drive / Closest to the Pin / Countback — a scorecard never
+          captures these on its own, so this stays a manual step regardless
+          of whether a player's points came from a scorecard or were typed
+          in directly. Deliberately separate from "Enter Results" so it
+          doesn't require opening the full event-details + points + team
+          form just to tick one box. */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
+          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback{' '}
+          <HiddenLaterTag />
+        </h2>
+        <button
+          onClick={() => setBonusOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+        >
+          {bonusOpen ? 'Hide' : 'Enter'}
+        </button>
+      </div>
+
+      {bonusOpen && (
+        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
+          {resultsError && <p className="text-red-400 text-sm px-4 pt-3">{resultsError}</p>}
+          <table className="w-full text-sm">
+            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
+              <tr>
+                <th className="px-4 py-3">Player</th>
+                <th className="px-4 py-3 text-center w-32">Longest Drive</th>
+                <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
+                <th className="px-4 py-3 text-center w-24">Countback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p) => {
+                const hasResult = form[p.id]?.points !== '' && form[p.id]?.points !== null && form[p.id]?.points !== undefined;
+                return (
+                  <tr key={p.id} className="border-b border-posgborder last:border-0">
+                    <td className="px-4 py-2 text-posgtext">
+                      {p.name}
+                      {!hasResult && (
+                        <span className="block text-[10px] text-posgmuted">No result yet — enter a score first</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.longest_drive}
+                        onChange={(e) => saveResultField(p.id, 'longest_drive', e.target.checked)}
+                        className="accent-fairway w-4 h-4 disabled:opacity-30"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.closest_to_pin}
+                        onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
+                        className="accent-fairway w-4 h-4 disabled:opacity-30"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.countback_win}
+                        onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
+                        className="accent-gold w-4 h-4 disabled:opacity-30"
+                        title="Tick if the committee decided this player wins a tie on points"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Read-only leaderboard for this event — individual + team side by side.
           This is the page's default view (entry forms above are collapsed
           behind "Enter Results" until clicked). This is also what regular
@@ -659,6 +816,25 @@ export default function EventDetailPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2 text-right font-mono text-gold font-semibold">
+                        {/* Bonus badge sits before the number, not after —
+                            the cell is right-aligned, so appending it after
+                            the number would shift the number itself left
+                            whenever a bonus is present, making the points
+                            column harder to scan down. Putting it first
+                            keeps the actual points value anchored to the
+                            right edge every time. */}
+                        {(p.longest_drive || p.closest_to_pin) && (
+                          <span
+                            className="text-fairway text-[10px] font-semibold mr-1 align-super"
+                            title={
+                              [p.longest_drive && 'Longest Drive', p.closest_to_pin && 'Closest to the Pin']
+                                .filter(Boolean)
+                                .join(' + ')
+                            }
+                          >
+                            +{(p.longest_drive ? 2 : 0) + (p.closest_to_pin ? 2 : 0)}
+                          </span>
+                        )}
                         {p.overall}
                       </td>
                     </tr>

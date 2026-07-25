@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, UserCircle2, ChevronRight } from 'lucide-react';
+import { roundHandicapForStrokes } from '@/lib/scoring';
 
-function fmt(n) {
-  if (n === null || n === undefined) return '—';
-  return Number(n).toFixed(1);
+// Tour Handicap shows the rounded whole number here — same rule
+// strokesReceived() uses on the course — not the raw decimal.
+function fmtHcp(n) {
+  const r = roundHandicapForStrokes(n);
+  return r === null ? '—' : String(r);
 }
 
 export default function PlayersPage() {
@@ -147,7 +150,7 @@ export default function PlayersPage() {
 
               <div className="shrink-0 text-right w-16">
                 <div className="text-2xl font-extrabold text-gold font-mono tabular-nums">
-                  {fmt(p.tour_handicap)}
+                  {fmtHcp(p.tour_handicap)}
                 </div>
                 <div className="text-[10px] uppercase tracking-wider text-posgmuted mt-0.5">
                   Hcp

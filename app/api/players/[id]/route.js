@@ -61,6 +61,43 @@ async function getPlayerWinCounts(supabase, playerId) {
   return { individual, team };
 }
 
+// Match Record (wins-losses-halves) for the Better Ball Match Play format —
+// a deliberately separate stat from Wins above. Wins means "best in the
+// whole field for an event"; a match result only means "won your own
+// fourball's head-to-head", so multiple players can each have a match win
+// on the same day. Only counts completed scorecards of that one format.
+async function getMatchRecord(supabase, playerId) {
+  const { data: memberships } = await supabase
+    .from("scorecard_players")
+    .select("scorecard_id, team_number, scorecards!inner(id, format, status)")
+    .eq("player_id", playerId)
+    .eq("scorecards.format", "better_ball_match_play")
+    .eq("scorecards.status", "completed");
+
+  const scorecardIds = (memberships || []).map((m) => m.scorecard_id);
+  if (scorecardIds.length === 0) return { wins: 0, losses: 0, halves: 0 };
+
+  const { data: matchResults } = await supabase
+    .from("match_results")
+    .select("scorecard_id, winning_team_number")
+    .in("scorecard_id", scorecardIds);
+
+  const resultByScorecard = Object.fromEntries(
+    (matchResults || []).map((m) => [m.scorecard_id, m.winning_team_number])
+  );
+
+  const record = { wins: 0, losses: 0, halves: 0 };
+  memberships.forEach((m) => {
+    const winningTeam = resultByScorecard[m.scorecard_id];
+    if (winningTeam === undefined) return; // scorecard completed but match_results row missing — skip rather than guess
+    if (winningTeam === null) record.halves += 1;
+    else if (winningTeam === m.team_number) record.wins += 1;
+    else record.losses += 1;
+  });
+
+  return record;
+}
+
 // Position this player finished in each event, matching the exact same
 // ranking rule as the Events page's own Event Leaderboard (individual
 // leaderboard in app/events/[id]/page.js): sort by points + LD/CTP bonuses,
@@ -115,7 +152,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "Player not found" }, { status: 404 });
   }
 
-  const [{ data: handicap }, { data: oom }, { data: qualification }, { data: results }, { data: rounds }, wins, eventPositions] =
+  const [{ data: handicap }, { data: oom }, { data: qualification }, { data: results }, { data: rounds }, wins, eventPositions, matchRecord] =
     await Promise.all([
       supabase.from("player_handicaps").select("*").eq("id", id).single(),
       supabase.from("order_of_merit").select("*").eq("player_id", id).single(),
@@ -132,6 +169,7 @@ export async function GET(request, { params }) {
         .order("created_at", { ascending: false }),
       getPlayerWinCounts(supabase, id),
       getEventPositions(supabase),
+      getMatchRecord(supabase, id),
     ]);
 
   // Mark the rounds that actually feed the handicap average — same "last 5,
@@ -170,6 +208,7 @@ export async function GET(request, { params }) {
     results_history: resultsHistory,
     rounds: roundsWithFlag,
     wins: wins || { individual: 0, team: 0 },
+    match_record: matchRecord || { wins: 0, losses: 0, halves: 0 },
   });
 }
 
