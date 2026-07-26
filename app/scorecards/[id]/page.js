@@ -15,6 +15,8 @@ import {
   RotateCcw,
   Trash2,
   Users2,
+  ArrowUpRight,
+  Crosshair,
 } from 'lucide-react';
 import {
   strokesReceived,
@@ -96,6 +98,31 @@ export default function ScorecardEntryPage() {
   }
 
   useEffect(load, [id]);
+
+  const [liveBoard, setLiveBoard] = useState(null);
+
+  // Combined leaderboard across every scorecard in this event (in-progress
+  // and completed alike), not just this foursome's own players — lets a
+  // marker see how other groups are doing without leaving the entry screen.
+  // Collapses to exactly this scorecard's own numbers when it's the only
+  // one running for the event. Polled on a timer rather than real-time push
+  // — a few seconds' lag is invisible in practice for golf, and it avoids
+  // adding a websocket subscription for a ~20-player app.
+  function loadLiveBoard(eventId) {
+    if (!eventId) return;
+    fetch(`/api/events/${eventId}/live-leaderboard`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((body) => {
+        if (!body.error) setLiveBoard(body);
+      });
+  }
+
+  useEffect(() => {
+    if (!scorecard?.event_id) return;
+    loadLiveBoard(scorecard.event_id);
+    const interval = setInterval(() => loadLiveBoard(scorecard.event_id), 12000);
+    return () => clearInterval(interval);
+  }, [scorecard?.event_id]);
 
   const hole = useMemo(
     () => course?.holes?.find((h) => h.hole_number === currentHole),
@@ -191,6 +218,7 @@ export default function ScorecardEntryPage() {
     // Refetch so running totals / hole-picker completion state reflect the save.
     const detail = await fetch(`/api/scorecards/${id}`, { cache: 'no-store' }).then((r) => r.json());
     setHoleScores(detail.hole_scores);
+    loadLiveBoard(scorecard.event_id);
     if (currentHole < 18) setCurrentHole(currentHole + 1);
   }
 
@@ -257,42 +285,6 @@ export default function ScorecardEntryPage() {
       return;
     }
     router.push(`/events/${scorecard.event_id}`);
-  }
-
-  // Running totals across every hole actually saved so far (not the draft).
-  const totals = players.map((p) => {
-    const pts = holeScores
-      .filter((hs) => hs.player_id === p.id)
-      .reduce((sum, hs) => sum + hs.stableford_points, 0);
-    return { player: p, points: pts };
-  });
-
-  // Live team running total — same "best of the team's players on each hole,
-  // summed across holes" math the /complete route uses to write the real
-  // event_teams row, just computed client-side from whatever's saved so far.
-  // Only meaningful for the two team formats; individual stableford has no
-  // teams at all.
-  let teamTotals = [];
-  if (isTeamFormat) {
-    const teamNumbers = [...new Set(players.map((p) => p.team_number))].filter(Boolean).sort();
-    teamTotals = teamNumbers.map((teamNumber) => {
-      const teamPlayerIds = players.filter((p) => p.team_number === teamNumber).map((p) => p.id);
-      const holesByNumber = {};
-      holeScores.forEach((hs) => {
-        if (!teamPlayerIds.includes(hs.player_id)) return;
-        holesByNumber[hs.hole_number] = holesByNumber[hs.hole_number] || [];
-        holesByNumber[hs.hole_number].push(hs.stableford_points);
-      });
-      const points = Object.values(holesByNumber).reduce(
-        (sum, pts) => sum + pts.reduce((a, b) => betterBallHolePoints(a, b), 0),
-        0
-      );
-      const names = players
-        .filter((p) => p.team_number === teamNumber)
-        .map((p) => p.name)
-        .join(' & ');
-      return { teamNumber, names, points };
-    });
   }
 
   let liveMatch = null;
@@ -550,42 +542,115 @@ export default function ScorecardEntryPage() {
         <p className="text-posgmuted">This course has no data for hole {currentHole}.</p>
       ) : null}
 
-      {/* Running totals — individual always, team alongside it for the two
-          team formats. Same numbers /complete will eventually write for
-          real, just computed live from whatever's saved so far. */}
-      <div className={'grid gap-4 ' + (isTeamFormat ? 'sm:grid-cols-2' : '')}>
+      {/* Live leaderboard across the WHOLE event — every scorecard, in
+          progress or completed, combined. Identical to "just this group"
+          when this is the only scorecard running for the event right now.
+          Polled on a timer (see loadLiveBoard above) so it keeps moving
+          even while this marker isn't the one tapping anything. Styled as
+          a real tour leaderboard — POS / PLAYER / THRU / TOTAL — per
+          Mike's ask, not a plain list. */}
+      <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+        <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+          <Trophy size={13} className="text-gold" /> Live Leaderboard — Individual
+        </h2>
+        {!liveBoard ? (
+          <p className="text-posgmuted text-sm">Loading…</p>
+        ) : liveBoard.individual.length === 0 ? (
+          <p className="text-posgmuted text-sm">No scores entered yet.</p>
+        ) : (
+          <div>
+            <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
+              <span>Pos</span>
+              <span>Player</span>
+              <span className="text-center">Thru</span>
+              <span className="text-right">Total</span>
+            </div>
+            {liveBoard.individual.map((row, i) => (
+              <div
+                key={row.player_id}
+                className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
+              >
+                <span
+                  className={
+                    'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
+                    (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                  }
+                >
+                  {i === 0 ? <Trophy size={12} /> : i + 1}
+                </span>
+                <span className="text-posgtext text-sm font-semibold truncate">
+                  {row.name}
+                  {row.longest_drive && (
+                    <ArrowUpRight size={12} className="inline text-fairway ml-1" title="Longest Drive" />
+                  )}
+                  {row.closest_to_pin && (
+                    <Crosshair size={12} className="inline text-gold ml-1" title="Closest to the Pin" />
+                  )}
+                </span>
+                <span className="text-posgmuted text-xs font-mono text-center">{row.thru ?? '–'}</span>
+                <span className="text-gold font-mono font-bold text-right">{row.overall}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {liveBoard && liveBoard.team.length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Users2 size={13} /> Live Leaderboard — Team
+          </h2>
+          <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
+            <span>Pos</span>
+            <span>Team</span>
+            <span className="text-center">Thru</span>
+            <span className="text-right">Total</span>
+          </div>
+          {liveBoard.team.map((t, i) => (
+            <div
+              key={`${t.scorecard_id}-${t.team_number}`}
+              className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
+            >
+              <span
+                className={
+                  'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
+                  (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                }
+              >
+                {i === 0 ? <Trophy size={12} /> : i + 1}
+              </span>
+              <span className="text-posgtext text-sm font-semibold truncate">
+                {t.names}
+                {t.group_label ? <span className="text-posgmuted font-normal"> — {t.group_label}</span> : ''}
+              </span>
+              <span className="text-posgmuted text-xs font-mono text-center">{t.thru ?? '–'}</span>
+              <span className="text-gold font-mono font-bold text-right">{t.points}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {liveBoard && liveBoard.matches.length > 0 && (
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2">
-            Individual ({holesCompleted.size} holes saved)
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Swords size={13} className="text-gold" /> Live Matches
           </h2>
           <div className="space-y-1">
-            {totals.map(({ player, points }) => (
-              <div key={player.id} className="flex items-center justify-between text-sm">
-                <span className="text-posgtext">{player.name}</span>
-                <span className="text-gold font-mono font-semibold">{points} pts</span>
+            {liveBoard.matches.map((m) => (
+              <div key={m.scorecard_id} className="flex items-center justify-between text-sm">
+                <span className="text-posgtext">
+                  {m.names_a} <span className="text-posgmuted">vs</span> {m.names_b}
+                  {m.group_label ? <span className="text-posgmuted"> — {m.group_label}</span> : ''}
+                </span>
+                <span className="text-gold font-mono font-semibold">
+                  {m.winningTeam ? (m.winningTeam === 'A' ? m.names_a : m.names_b) + ' ' : ''}
+                  {m.label}
+                </span>
               </div>
             ))}
           </div>
         </div>
-
-        {isTeamFormat && (
-          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-            <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Users2 size={13} /> Team {isMatchPlay ? '(better-ball points, not the match score above)' : ''}
-            </h2>
-            <div className="space-y-1">
-              {teamTotals.map(({ teamNumber, names, points }) => (
-                <div key={teamNumber} className="flex items-center justify-between text-sm">
-                  <span className="text-posgtext">
-                    Team {teamNumber} <span className="text-posgmuted">— {names}</span>
-                  </span>
-                  <span className="text-gold font-mono font-semibold">{points} pts</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
