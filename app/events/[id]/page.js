@@ -7,10 +7,7 @@ import ScorecardsSection from './ScorecardsSection';
 import {
   ArrowLeft,
   Flag,
-  Save,
   Trash2,
-  Plus,
-  Users,
   Trophy,
   ArrowUpRight,
   Crosshair,
@@ -20,6 +17,23 @@ import {
 } from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
+
+const FORMAT_OPTIONS = [
+  'Individual Stableford',
+  'Better Ball Stableford',
+  'Better Ball Match Play',
+  'Scramble',
+  'American Scramble',
+];
+
+// Status is auto-derived server-side from this event's scorecards (see
+// lib/eventStatus.js) — this is display-only, never an input.
+const STATUS_LABEL = { upcoming: 'Upcoming', in_progress: 'In Progress', completed: 'Completed' };
+const STATUS_STYLE = {
+  upcoming: 'bg-posgborder text-posgmuted',
+  in_progress: 'bg-gold/15 text-gold',
+  completed: 'bg-fairway/15 text-fairway',
+};
 
 // Visual planning marker only — nothing is actually hidden yet. Mike flagged
 // these as sections that will become admin-only once a public/player view exists.
@@ -39,34 +53,23 @@ export default function EventDetailPage() {
   const [form, setForm] = useState({}); // player_id -> { points, longest_drive, closest_to_pin }
   const [meta, setMeta] = useState({});
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
   const [savingMeta, setSavingMeta] = useState(false);
   const [resultsError, setResultsError] = useState('');
   const [metaError, setMetaError] = useState('');
 
-  // Closed by default so the page's resting state is just the read-only
-  // leaderboard — the "Enter Results" button below reveals the event
-  // details form, individual results table, and team results section, all
-  // together. This is a real UI toggle today (unlike HiddenLaterTag, which
-  // is only a label) — once real auth exists, this becomes an actual
-  // admin-only gate instead of something anyone can just click open.
-  const [entryOpen, setEntryOpen] = useState(false);
+  // Closed by default. Holds ONLY the event details form now (name, date,
+  // course, format, notes) — manual points/team entry was retired
+  // entirely once digital scorecards + the live leaderboard took over
+  // actual scoring (Mike's call, 2026-07-25). Once real auth exists, this
+  // becomes an actual admin-only gate instead of something anyone can just
+  // click open.
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
-  // Separate, smaller toggle from "Enter Results" — for the two formats
-  // (LD/CTP/Countback) that a digital scorecard can never capture on its
-  // own, since it only knows gross/net/points. Positioned between the
-  // Scorecards section and the Event Leaderboard so it's usable without
-  // opening the full manual entry form (which also has a Points field that
-  // shouldn't be touched for a player whose points already came from a
-  // completed scorecard).
+  // Separate toggle for the two things a digital scorecard can never
+  // capture on its own (LD/CTP/Countback), so ticking one doesn't require
+  // opening the full event-details form.
   const [bonusOpen, setBonusOpen] = useState(false);
-
-  const [teamFormOpen, setTeamFormOpen] = useState(false);
-  const [teamPoints, setTeamPoints] = useState('');
-  const [teamMemberIds, setTeamMemberIds] = useState([]);
-  const [savingTeam, setSavingTeam] = useState(false);
-  const [teamError, setTeamError] = useState('');
 
   function load() {
     fetch(`/api/events/${id}`, { cache: 'no-store' })
@@ -162,31 +165,6 @@ export default function EventDetailPage() {
     setSavedAt(new Date());
   }
 
-  async function saveResults() {
-    setSaving(true);
-    setResultsError('');
-    const results = Object.entries(form).map(([player_id, v]) => ({
-      player_id,
-      points: v.points === '' ? null : v.points,
-      longest_drive: v.longest_drive,
-      closest_to_pin: v.closest_to_pin,
-      countback_win: v.countback_win,
-    }));
-    const res = await fetch(`/api/events/${id}/results`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ results }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setResultsError(body.error || `Save failed (${res.status}) — nothing was recorded.`);
-      return;
-    }
-    setSavedAt(new Date());
-    load();
-  }
-
   async function saveMeta(e) {
     e.preventDefault();
     setSavingMeta(true);
@@ -205,86 +183,12 @@ export default function EventDetailPage() {
     }
   }
 
-  // Removes a single player's result immediately, rather than making them
-  // clear the points field and remember to hit "Save results".
-  async function deleteResult(playerId) {
-    if (!confirm("Remove this player's result for this event?")) return;
-    setResultsError('');
-    const results = Object.entries(form).map(([player_id, v]) => ({
-      player_id,
-      points: player_id === playerId ? null : v.points === '' ? null : v.points,
-      longest_drive: player_id === playerId ? false : v.longest_drive,
-      closest_to_pin: player_id === playerId ? false : v.closest_to_pin,
-      countback_win: player_id === playerId ? false : v.countback_win,
-    }));
-    const res = await fetch(`/api/events/${id}/results`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ results }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setResultsError(body.error || `Delete failed (${res.status}).`);
-      return;
-    }
-    load();
-  }
-
   async function deleteEvent() {
     if (!confirm(`Delete "${event.name}"? This also removes all its results. This can't be undone.`)) {
       return;
     }
     await fetch(`/api/events/${id}`, { method: 'DELETE' });
     router.push('/events');
-  }
-
-  function toggleTeamMember(playerId) {
-    setTeamMemberIds((ids) =>
-      ids.includes(playerId) ? ids.filter((i) => i !== playerId) : [...ids, playerId]
-    );
-  }
-
-  async function addTeam(e) {
-    e.preventDefault();
-    if (teamMemberIds.length === 0) {
-      setTeamError('Pick at least one player');
-      return;
-    }
-    setSavingTeam(true);
-    setTeamError('');
-    const res = await fetch(`/api/events/${id}/teams`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        points: teamPoints === '' ? null : teamPoints,
-        player_ids: teamMemberIds,
-      }),
-    });
-    const body = await res.json();
-    setSavingTeam(false);
-    if (!res.ok) {
-      setTeamError(body.error || 'Something went wrong');
-      return;
-    }
-    setTeamPoints('');
-    setTeamMemberIds([]);
-    setTeamFormOpen(false);
-    load();
-  }
-
-  async function updateTeamPoints(teamId, points) {
-    await fetch(`/api/teams/${teamId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ points: points === '' ? null : points }),
-    });
-    load();
-  }
-
-  async function deleteTeam(teamId, memberNames) {
-    if (!confirm(`Delete team "${memberNames || 'this team'}"?`)) return;
-    await fetch(`/api/teams/${teamId}`, { method: 'DELETE' });
-    load();
   }
 
   if (error) {
@@ -334,15 +238,14 @@ export default function EventDetailPage() {
         <div className="flex items-center gap-2">
           <Flag size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">{event.name}</h1>
-          <span
-            className={
-              'text-xs px-2 py-0.5 rounded-full ' +
-              (event.status === 'completed'
-                ? 'bg-fairway/15 text-fairway'
-                : 'bg-posgborder text-posgmuted')
-            }
-          >
+          <span className="text-xs px-2 py-0.5 rounded-full bg-posgborder text-posgmuted">
             {typeLabel[event.event_type] || event.event_type}
+          </span>
+          <span
+            className={'text-xs px-2 py-0.5 rounded-full ' + (STATUS_STYLE[event.status] || STATUS_STYLE.upcoming)}
+            title="Set automatically from this event's scorecards — not editable by hand"
+          >
+            {STATUS_LABEL[event.status] || event.status}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -354,10 +257,10 @@ export default function EventDetailPage() {
             <ClipboardList size={14} /> New Scorecard
           </Link>
           <button
-            onClick={() => setEntryOpen((v) => !v)}
+            onClick={() => setDetailsOpen((v) => !v)}
             className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
           >
-            <ClipboardEdit size={14} /> {entryOpen ? 'Hide Entry' : 'Enter Results'}
+            <ClipboardEdit size={14} /> {detailsOpen ? 'Hide Details' : 'Edit Event Details'}
           </button>
           <button
             onClick={deleteEvent}
@@ -371,12 +274,20 @@ export default function EventDetailPage() {
         {enteredCount} of {players.length} players have a result recorded.
       </p>
 
-      {entryOpen && (
-      <>
+      {detailsOpen && (
       <form
         onSubmit={saveMeta}
         className="bg-posgcard rounded-xl border border-posgborder p-5 mb-8 grid sm:grid-cols-2 gap-4"
       >
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-posgmuted mb-1">Name</label>
+          <input
+            value={meta.name || ''}
+            onChange={(e) => setMeta({ ...meta, name: e.target.value })}
+            placeholder="e.g. Qualifier 3"
+            className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
+          />
+        </div>
         <div>
           <label className="block text-xs text-posgmuted mb-1">Date</label>
           <input
@@ -429,23 +340,25 @@ export default function EventDetailPage() {
         </div>
         <div>
           <label className="block text-xs text-posgmuted mb-1">Format</label>
-          <input
+          <select
             value={meta.format || ''}
             onChange={(e) => setMeta({ ...meta, format: e.target.value })}
-            placeholder="e.g. Individual Stableford"
             className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-          />
+          >
+            <option value="">— Select format —</option>
+            {FORMAT_OPTIONS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-xs text-posgmuted mb-1">Status</label>
-          <select
-            value={meta.status || 'upcoming'}
-            onChange={(e) => setMeta({ ...meta, status: e.target.value })}
-            className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-          >
-            <option value="upcoming">Upcoming</option>
-            <option value="completed">Completed</option>
-          </select>
+          <p className="text-sm text-posgtext px-3 py-1.5">
+            {STATUS_LABEL[event.status] || event.status}{' '}
+            <span className="text-xs text-posgmuted">— set automatically from scorecards</span>
+          </p>
         </div>
         <div className="sm:col-span-2">
           <label className="block text-xs text-posgmuted mb-1">Notes</label>
@@ -467,196 +380,6 @@ export default function EventDetailPage() {
           {metaError && <p className="text-red-400 text-sm mt-2">{metaError}</p>}
         </div>
       </form>
-
-      {/* Individual results — this is what feeds Order of Merit */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          Results (individual — counts for Order of Merit) <HiddenLaterTag />
-        </h2>
-        <button
-          onClick={saveResults}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition disabled:opacity-50"
-        >
-          <Save size={14} /> {saving ? 'Saving…' : 'Save results'}
-        </button>
-      </div>
-      {savedAt && (
-        <p className="text-xs text-posgmuted mb-2">Saved {savedAt.toLocaleTimeString()}</p>
-      )}
-      {resultsError && (
-        <p className="text-red-400 text-sm mb-2">{resultsError}</p>
-      )}
-
-      <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
-        <table className="w-full text-sm">
-          <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-            <tr>
-              <th className="px-4 py-3">Player</th>
-              <th className="px-4 py-3 w-28">Points</th>
-              <th className="px-4 py-3 text-center w-32">Longest Drive</th>
-              <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
-              <th className="px-4 py-3 text-center w-24">Countback</th>
-              <th className="px-4 py-3 w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map((p) => (
-              <tr key={p.id} className="border-b border-posgborder last:border-0">
-                <td className="px-4 py-2 text-posgtext">{p.name}</td>
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    value={form[p.id]?.points ?? ''}
-                    onChange={(e) => setField(p.id, 'points', e.target.value)}
-                    className="w-20 bg-posgbg border border-posgborder rounded-md px-2 py-1 text-sm text-posgtext"
-                    placeholder="—"
-                  />
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={!!form[p.id]?.longest_drive}
-                    onChange={(e) => saveResultField(p.id, 'longest_drive', e.target.checked)}
-                    className="accent-fairway w-4 h-4"
-                  />
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={!!form[p.id]?.closest_to_pin}
-                    onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
-                    className="accent-fairway w-4 h-4"
-                  />
-                </td>
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={!!form[p.id]?.countback_win}
-                    onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
-                    className="accent-gold w-4 h-4"
-                    title="Tick if the committee decided this player wins a tie on points"
-                  />
-                </td>
-                <td className="px-4 py-2 text-center">
-                  {form[p.id]?.points !== '' && form[p.id]?.points !== null && (
-                    <button
-                      onClick={() => deleteResult(p.id)}
-                      className="text-posgmuted hover:text-red-400"
-                      title="Remove this player's result"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Team results — separate from the above, never touches Order of Merit */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          <Users size={17} className="text-gold" /> Team Results <HiddenLaterTag />
-        </h2>
-        <button
-          onClick={() => setTeamFormOpen((v) => !v)}
-          className="text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
-        >
-          {teamFormOpen ? 'Cancel' : '+ Add team'}
-        </button>
-      </div>
-      <p className="text-xs text-posgmuted mb-3">
-        Group players into a team and give them a result — for team-format rounds (better
-        ball, scramble, American scramble). This doesn&apos;t affect Order of Merit or
-        handicaps, it's tracked for team/player stats later.
-      </p>
-
-      {teamFormOpen && (
-        <form
-          onSubmit={addTeam}
-          className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4"
-        >
-          <div className="mb-3 max-w-[200px]">
-            <label className="block text-xs text-posgmuted mb-1">Points</label>
-            <input
-              type="number"
-              value={teamPoints}
-              onChange={(e) => setTeamPoints(e.target.value)}
-              className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-              placeholder="e.g. 119"
-            />
-          </div>
-          <label className="block text-xs text-posgmuted mb-2">Players on this team</label>
-          <div className="grid sm:grid-cols-3 gap-1.5 mb-3">
-            {players.map((p) => (
-              <label key={p.id} className="flex items-center gap-2 text-sm text-posgtext">
-                <input
-                  type="checkbox"
-                  checked={teamMemberIds.includes(p.id)}
-                  onChange={() => toggleTeamMember(p.id)}
-                  className="accent-fairway w-4 h-4"
-                />
-                {p.name}
-              </label>
-            ))}
-          </div>
-          <button
-            type="submit"
-            disabled={savingTeam}
-            className="inline-flex items-center gap-1.5 bg-fairway text-black font-medium px-3 py-1.5 rounded-md text-sm disabled:opacity-50"
-          >
-            <Plus size={14} /> {savingTeam ? 'Saving…' : 'Add team'}
-          </button>
-          {teamError && <p className="text-red-400 text-sm mt-2">{teamError}</p>}
-        </form>
-      )}
-
-      {teams.length === 0 ? (
-        <p className="text-posgmuted text-sm">No teams recorded for this event yet.</p>
-      ) : (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-              <tr>
-                <th className="px-4 py-3">Players</th>
-                <th className="px-4 py-3 w-28 text-right">Points</th>
-                <th className="px-4 py-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((t) => (
-                <tr key={t.id} className="border-b border-posgborder last:border-0">
-                  <td className="px-4 py-2 text-posgtext">
-                    {t.members.map((m) => m.name).join(', ')}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <input
-                      type="number"
-                      defaultValue={t.points ?? ''}
-                      onBlur={(e) => updateTeamPoints(t.id, e.target.value)}
-                      className="w-20 bg-posgbg border border-posgborder rounded-md px-2 py-1 text-sm text-gold font-mono text-right"
-                      placeholder="—"
-                    />
-                  </td>
-                  <td className="px-4 py-2 text-center">
-                    <button
-                      onClick={() => deleteTeam(t.id, t.members.map((m) => m.name).join(', '))}
-                      className="text-posgmuted hover:text-red-400"
-                      title="Delete team"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      </>
       )}
 
       {/* The actual played scorecards for this event, hole by hole — separate
@@ -685,6 +408,9 @@ export default function EventDetailPage() {
 
       {bonusOpen && (
         <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
+          {savedAt && (
+            <p className="text-xs text-posgmuted px-4 pt-3">Saved {savedAt.toLocaleTimeString()}</p>
+          )}
           {resultsError && <p className="text-red-400 text-sm px-4 pt-3">{resultsError}</p>}
           <table className="w-full text-sm">
             <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
@@ -743,16 +469,15 @@ export default function EventDetailPage() {
       )}
 
       {/* Read-only leaderboard for this event — individual + team side by side.
-          This is the page's default view (entry forms above are collapsed
-          behind "Enter Results" until clicked). This is also what regular
-          (non-admin) users will see once real auth exists — the entry forms
-          above will be admin-only rather than just collapsed-by-default. */}
+          Scores come in via a digital scorecard ("New Scorecard" above); this
+          table reflects whatever's been completed so far. This is also what
+          regular (non-admin) users will see once real auth exists. */}
       <div className="flex items-center gap-2 mt-8 mb-1">
         <Trophy size={20} className="text-gold" />
         <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
       </div>
       <p className="text-xs text-posgmuted mb-2">
-        This event's results. Click &quot;Enter Results&quot; above to add or edit scores.
+        This event's results, from completed scorecards. Use &quot;New Scorecard&quot; above to record a round.
       </p>
 
       {/* Key for the icons used in the Individual table below */}

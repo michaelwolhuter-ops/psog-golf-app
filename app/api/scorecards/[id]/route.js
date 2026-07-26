@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { syncEventStatus } from "@/lib/eventStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export async function DELETE(request, { params }) {
 
   const { data: scorecard } = await supabase
     .from("scorecards")
-    .select("status")
+    .select("status, event_id")
     .eq("id", id)
     .single();
 
@@ -92,5 +93,12 @@ export async function DELETE(request, { params }) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // One fewer scorecard for this event now — recheck its overall status
+  // (could drop all the way back to "upcoming" if that was the only one).
+  if (scorecard?.event_id) {
+    await syncEventStatus(supabase, scorecard.event_id);
+  }
+
   return NextResponse.json({ success: true });
 }

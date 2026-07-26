@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { syncEventStatus } from "@/lib/eventStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function POST(request, { params }) {
 
   const { data: scorecard, error: scError } = await supabase
     .from("scorecards")
-    .select("id, status")
+    .select("id, status, event_id")
     .eq("id", id)
     .single();
 
@@ -53,6 +54,10 @@ export async function POST(request, { params }) {
   if (statusError) {
     return NextResponse.json({ error: statusError.message }, { status: 500 });
   }
+
+  // Reopening a round means the event is no longer fully finished — flips
+  // it back from "completed" to "in_progress" if that's what it was.
+  await syncEventStatus(supabase, scorecard.event_id);
 
   return NextResponse.json({ success: true });
 }

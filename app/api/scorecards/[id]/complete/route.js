@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { betterBallHolePoints, matchPlayHoleResult, matchStatus } from "@/lib/scoring";
+import { syncEventStatus } from "@/lib/eventStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -173,6 +174,11 @@ export async function POST(request, { params }) {
   if (statusError) {
     return NextResponse.json({ error: statusError.message }, { status: 500 });
   }
+
+  // Re-check the whole event: only flips to "completed" itself once every
+  // one of its scorecards is — otherwise stays "in_progress" (other groups
+  // may still be out).
+  await syncEventStatus(supabase, eventId);
 
   return NextResponse.json({ success: true });
 }

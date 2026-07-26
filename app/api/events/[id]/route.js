@@ -48,7 +48,12 @@ export async function PATCH(request, { params }) {
   const body = await request.json();
 
   const updates = {};
-  const allowed = ["name", "event_date", "golf_course", "format", "status", "notes", "sort_order", "course_id"];
+  // "status" is deliberately not editable here — it's auto-derived from the
+  // event's scorecards by syncEventStatus() (see lib/eventStatus.js),
+  // called after a scorecard is created/completed/reopened/deleted. Letting
+  // it be PATCHed by hand again would let it drift out of sync with what
+  // actually happened.
+  const allowed = ["name", "event_date", "golf_course", "format", "notes", "sort_order", "course_id"];
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
   }

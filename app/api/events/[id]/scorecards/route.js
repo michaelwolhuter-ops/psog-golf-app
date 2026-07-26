@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { syncEventStatus } from "@/lib/eventStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,10 @@ export async function POST(request, { params }) {
     await supabase.from("scorecards").delete().eq("id", scorecard.id);
     return NextResponse.json({ error: playersError.message }, { status: 500 });
   }
+
+  // A round just started for this event — flips it to "in_progress" if it
+  // was still sitting at "upcoming".
+  await syncEventStatus(supabase, id);
 
   return NextResponse.json({ data: scorecard }, { status: 201 });
 }
