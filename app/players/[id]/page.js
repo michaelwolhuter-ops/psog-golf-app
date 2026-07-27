@@ -21,6 +21,18 @@ import {
   Check,
   X,
   Swords,
+  TrendingDown,
+  TrendingUp,
+  Zap,
+  Frown,
+  Star,
+  Bird,
+  Circle,
+  ListOrdered,
+  Users2,
+  ThumbsDown,
+  Repeat2,
+  CircleSlash,
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
 
@@ -179,7 +191,19 @@ export default function PlayerProfilePage() {
 
   if (!data) return <p className="text-posgmuted">Loading…</p>;
 
-  const { player, handicap, oom_position, oom_total_points, qualification, results_history, rounds, wins, match_record } = data;
+  const {
+    player,
+    handicap,
+    oom_position,
+    oom_total_points,
+    qualification,
+    results_history,
+    rounds,
+    wins,
+    match_record,
+    hole_stats,
+    top_finishes,
+  } = data;
 
   // Players either have an official Index (subscription app) or, until they
   // get one, a Committee Handicap the committee sets manually — never both
@@ -312,7 +336,7 @@ export default function PlayerProfilePage() {
 
       {/* ================= Section 1: player info & stats ================= */}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-9 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Target size={13} /> Tour Handicap
@@ -352,14 +376,15 @@ export default function PlayerProfilePage() {
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Award size={13} /> Wins
+            <Award size={13} /> Individual Wins
           </div>
-          <div className="text-2xl font-bold text-gold mt-1">
-            {(wins?.individual || 0) + (wins?.team || 0)}
+          <div className="text-2xl font-bold text-gold mt-1">{wins?.individual || 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Users2 size={13} /> Team Wins
           </div>
-          <div className="text-xs text-posgmuted">
-            {wins?.individual || 0} individual · {wins?.team || 0} team
-          </div>
+          <div className="text-2xl font-bold text-gold mt-1">{wins?.team || 0}</div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
@@ -381,6 +406,112 @@ export default function PlayerProfilePage() {
             {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
           </div>
           <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
+        </div>
+      </div>
+
+      <p className="text-xs text-posgmuted mb-3">
+        {hole_stats?.full_rounds_counted
+          ? `From ${hole_stats.full_rounds_counted} full 18-hole round${hole_stats.full_rounds_counted === 1 ? '' : 's'} played (rounds ended early by match play aren’t compared here). Eagles/Birdies/Pars/Rings/3 Putts count every hole played, including unfinished rounds.`
+          : 'No full 18-hole rounds recorded yet via the digital scorecard.'}
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <TrendingDown size={13} /> Lowest Gross
+          </div>
+          <div className="text-2xl font-bold text-fairway mt-1">
+            {hole_stats?.lowest_gross ? hole_stats.lowest_gross.value : '—'}
+          </div>
+          {hole_stats?.lowest_gross && (
+            <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_gross.event_name}</div>
+          )}
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <TrendingUp size={13} /> Highest Gross
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {hole_stats?.highest_gross ? hole_stats.highest_gross.value : '—'}
+          </div>
+          {hole_stats?.highest_gross && (
+            <div className="text-xs text-posgmuted truncate">{hole_stats.highest_gross.event_name}</div>
+          )}
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Zap size={13} /> Most Points
+          </div>
+          <div className="text-2xl font-bold text-gold mt-1">
+            {hole_stats?.most_points ? hole_stats.most_points.value : '—'}
+          </div>
+          {hole_stats?.most_points && (
+            <div className="text-xs text-posgmuted truncate">{hole_stats.most_points.event_name}</div>
+          )}
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Frown size={13} /> Lowest Points
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {hole_stats?.lowest_points ? hole_stats.lowest_points.value : '—'}
+          </div>
+          {hole_stats?.lowest_points && (
+            <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_points.event_name}</div>
+          )}
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ThumbsDown size={13} /> 100+ Gross Rounds
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rounds_100_plus ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Star size={13} /> Eagles
+          </div>
+          <div className="text-2xl font-bold text-gold mt-1">{hole_stats?.eagles ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Bird size={13} /> Birdies
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.birdies ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Circle size={13} /> Pars
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.pars ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <CircleSlash size={13} /> Rings
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rings ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Repeat2 size={13} /> 3 Putts
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.three_putts ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ListOrdered size={13} /> Top 3 Finishes
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top3 ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ListOrdered size={13} /> Top 5 Finishes
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top5 ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ListOrdered size={13} /> Top 10 Finishes
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top10 ?? 0}</div>
         </div>
       </div>
 
@@ -426,11 +557,6 @@ export default function PlayerProfilePage() {
           </table>
         </div>
       )}
-
-      <p className="text-xs text-posgmuted mb-10">
-        Future statistics (birdies, bogeys, head-to-head) will appear in this section once
-        scorecards exist.
-      </p>
 
       {/* ================= Section 2: handicap ================= */}
 

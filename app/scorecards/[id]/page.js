@@ -17,10 +17,11 @@ import {
   Users2,
   ArrowUpRight,
   Crosshair,
+  Repeat2,
 } from 'lucide-react';
 import {
   strokesReceived,
-  stablefordPoints,
+  resolveHoleScore,
   ringCap,
   betterBallHolePoints,
   matchPlayHoleResult,
@@ -28,10 +29,11 @@ import {
 } from '@/lib/scoring';
 
 const QUICK_TAPS = [
-  { label: 'Eagle', offset: -2 },
   { label: 'Birdie', offset: -1 },
   { label: 'Par', offset: 0 },
   { label: 'Bogey', offset: 1 },
+  { label: 'Double Bogey', offset: 2 },
+  { label: 'Triple Bogey', offset: 3 },
 ];
 
 const FORMAT_LABEL = {
@@ -59,7 +61,7 @@ export default function ScorecardEntryPage() {
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
   // whenever the hole changes. Nothing here is saved until "Confirm & Save"
   // is pressed, on purpose — no silent auto-advance on a stray tap.
-  const [draft, setDraft] = useState({}); // player_id -> { gross_score, rung }
+  const [draft, setDraft] = useState({}); // player_id -> { gross_score, rung, three_putt }
   const [expandedPlayer, setExpandedPlayer] = useState(null); // player_id with the number pad open
 
   function load() {
@@ -137,7 +139,7 @@ export default function ScorecardEntryPage() {
     holeScores
       .filter((hs) => hs.hole_number === currentHole)
       .forEach((hs) => {
-        existing[hs.player_id] = { gross_score: hs.gross_score, rung: hs.rung };
+        existing[hs.player_id] = { gross_score: hs.gross_score, rung: hs.rung, three_putt: hs.three_putt };
       });
     setDraft(existing);
     setExpandedPlayer(null);
@@ -169,29 +171,75 @@ export default function ScorecardEntryPage() {
   }
 
   function tap(playerId, grossScore) {
-    setDraft((d) => ({ ...d, [playerId]: { gross_score: grossScore, rung: false } }));
+    setDraft((d) => ({
+      ...d,
+      [playerId]: { gross_score: grossScore, rung: false, three_putt: !!d[playerId]?.three_putt },
+    }));
     setExpandedPlayer(null);
   }
 
   function tapRing(playerId) {
-    const player = players.find((p) => p.id === playerId);
-    const strokes = strokesReceived(player.tour_handicap, hole.stroke_index);
-    const cap = ringCap(hole.par, strokes);
-    setDraft((d) => ({ ...d, [playerId]: { gross_score: cap, rung: true } }));
+    const cap = ringCap(hole.par);
+    setDraft((d) => ({
+      ...d,
+      [playerId]: { gross_score: cap, rung: true, three_putt: !!d[playerId]?.three_putt },
+    }));
     setExpandedPlayer(null);
   }
 
-  const allEntered = players.length > 0 && players.every((p) => draft[p.id] != null);
+  // Ticking 3 Putt doesn't require a score to already be chosen — a marker
+  // might tick it first, then pick the score — so this merges into whatever
+  // draft entry exists (or starts a bare one) rather than requiring
+  // gross_score to be set already. Kept separate from tap()/tapRing() so
+  // toggling it never clobbers a score already chosen for this hole.
+  function toggleThreePutt(playerId) {
+    setDraft((d) => ({
+      ...d,
+      [playerId]: { ...(d[playerId] || {}), three_putt: !d[playerId]?.three_putt },
+    }));
+  }
 
-  // Live preview of points for whatever's in the draft right now — this is
-  // what "confirm before advancing" shows: the real computed numbers, not
-  // just the raw taps, so a marker can catch a mistake before saving.
+  // Gated on gross_score specifically (not just "draft entry exists") — a
+  // 3 Putt tick alone shouldn't be treated as a complete entry, or Confirm &
+  // Save could fire with no real score chosen for that player.
+  const allEntered = players.length > 0 && players.every((p) => draft[p.id]?.gross_score != null);
+
+  // Live preview of what will actually be saved — runs the exact same
+  // resolveHoleScore() the server uses (2026-07-27 cap rule: max triple
+  // bogey, 0 points, whether the marker tapped Ring or just typed in a
+  // genuinely bad number like a 10) so the preview never shows a different
+  // gross/points than what Confirm & Save is about to write.
+  // `rawGross`/`rawRung` are exactly what the marker tapped/typed — used to
+  // decide which quick-tap/number-pad button looks "selected", so choosing
+  // e.g. a 10 on a par 4 still highlights the "10" button even though the
+  // resolved (saved) values below will show the capped 7/0 pts. Quick-taps
+  // never exceed the cap (Triple Bogey = par+3 = the cap exactly), so this
+  // only matters for the "More…" number pad.
   const preview = players.map((p) => {
     const d = draft[p.id];
-    if (!d) return { player: p, gross: null, points: null };
     const strokes = strokesReceived(p.tour_handicap, hole.stroke_index);
-    const points = stablefordPoints(d.gross_score, hole.par, strokes);
-    return { player: p, gross: d.gross_score, points, rung: d.rung, strokes };
+    if (!d || d.gross_score == null) {
+      return {
+        player: p,
+        gross: null,
+        points: null,
+        rawGross: null,
+        rawRung: false,
+        three_putt: !!d?.three_putt,
+        strokes,
+      };
+    }
+    const resolved = resolveHoleScore(d.gross_score, hole.par, strokes, !!d.rung);
+    return {
+      player: p,
+      gross: resolved.gross_score,
+      points: resolved.stableford_points,
+      rung: resolved.rung,
+      rawGross: d.gross_score,
+      rawRung: !!d.rung,
+      strokes,
+      three_putt: !!d.three_putt,
+    };
   });
 
   async function confirmAndSave() {
@@ -206,6 +254,7 @@ export default function ScorecardEntryPage() {
           player_id: p.id,
           gross_score: draft[p.id].gross_score,
           rung: !!draft[p.id].rung,
+          three_putt: !!draft[p.id].three_putt,
         })),
       }),
     });
@@ -430,7 +479,7 @@ export default function ScorecardEntryPage() {
           </div>
 
           <div className="space-y-3">
-            {preview.map(({ player, gross, points, rung, strokes }) => {
+            {preview.map(({ player, gross, points, rung, rawGross, rawRung, strokes, three_putt }) => {
               const s = strokesReceived(player.tour_handicap, hole.stroke_index);
               return (
                 <div key={player.id} className="bg-posgbg rounded-lg p-3">
@@ -460,7 +509,12 @@ export default function ScorecardEntryPage() {
                     {gross != null && (
                       <span className="text-xs text-posgmuted">
                         Gross <span className="text-posgtext font-mono">{gross}</span>
-                        {rung && <span className="text-gold ml-1">(rung)</span>} · Pts{' '}
+                        {rung && (
+                          <span className="text-gold ml-1">
+                            ({rawGross > gross ? `capped, entered ${rawGross}` : 'rung'})
+                          </span>
+                        )}
+                        {three_putt && <span className="text-posgmuted ml-1">(3 putt)</span>} · Pts{' '}
                         <span className="text-gold font-mono font-semibold">{points}</span>
                       </span>
                     )}
@@ -469,7 +523,7 @@ export default function ScorecardEntryPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {QUICK_TAPS.map((qt) => {
                       const value = Math.max(1, hole.par + qt.offset);
-                      const selected = gross === value && !rung;
+                      const selected = rawGross === value && !rawRung;
                       return (
                         <button
                           key={qt.label}
@@ -499,9 +553,21 @@ export default function ScorecardEntryPage() {
                         'text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
                         (rung ? 'bg-gold text-black' : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
                       }
-                      title="Picked up after a failed cap attempt — records the ring cap score automatically"
+                      title="Picked up without finishing — records triple bogey, 0 pts, automatically"
                     >
                       Ring
+                    </button>
+                    <button
+                      onClick={() => toggleThreePutt(player.id)}
+                      className={
+                        'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
+                        (three_putt
+                          ? 'bg-posgtext text-posgbg'
+                          : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
+                      }
+                      title="Tick if this player 3-putted this hole"
+                    >
+                      <Repeat2 size={12} /> 3 Putt
                     </button>
                   </div>
 
@@ -511,9 +577,10 @@ export default function ScorecardEntryPage() {
                         <button
                           key={n}
                           onClick={() => tap(player.id, n)}
+                          title={n > ringCap(hole.par) ? `Recorded as ${ringCap(hole.par)}, 0 pts` : undefined}
                           className={
                             'w-8 h-8 rounded-md text-xs font-mono transition ' +
-                            (gross === n && !rung
+                            (rawGross === n && !rawRung
                               ? 'bg-fairway text-black'
                               : 'bg-posgborder text-posgtext hover:bg-posgcardhover')
                           }
