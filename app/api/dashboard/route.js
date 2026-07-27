@@ -1,7 +1,52 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { fetchHoleRowsWithPar, aggregateHoleStats, deriveRoundExtremes } from "@/lib/statHelpers";
 
 export const dynamic = "force-dynamic";
+
+// Statistics Snapshot (Most Pars, Most Rings, Highest Gross) reuses the
+// exact same shared aggregation the full Statistics page ranks against —
+// just picks the single #1 leader per category instead of a top-5 list, so
+// the dashboard preview can never quietly disagree with the real page.
+// Players with a value of 0 (no pars/rings yet) or no full 18-hole round
+// (for Highest Gross) are excluded, same "don't pad with zeros" rule the
+// Statistics leaderboards already use.
+async function getStatsSnapshot(supabase) {
+  const [{ data: players }, { holeRows, parByHole }] = await Promise.all([
+    supabase.from("players").select("id, name, nickname"),
+    fetchHoleRowsWithPar(supabase),
+  ]);
+
+  const nameById = {};
+  (players || []).forEach((p) => {
+    nameById[p.id] = p.nickname || p.name;
+  });
+
+  const holeAggByPlayer = aggregateHoleStats(holeRows, parByHole);
+
+  let mostPars = null;
+  let mostRings = null;
+  let highestGross = null;
+
+  holeAggByPlayer.forEach((agg, playerId) => {
+    const name = nameById[playerId] || "Unknown player";
+    if (agg.pars > 0 && (!mostPars || agg.pars > mostPars.value)) {
+      mostPars = { name, value: agg.pars };
+    }
+    if (agg.rings > 0 && (!mostRings || agg.rings > mostRings.value)) {
+      mostRings = { name, value: agg.rings };
+    }
+    const extremes = deriveRoundExtremes(agg);
+    if (
+      extremes.highest_gross &&
+      (!highestGross || extremes.highest_gross.value > highestGross.value)
+    ) {
+      highestGross = { name, value: extremes.highest_gross.value };
+    }
+  });
+
+  return { most_pars: mostPars, most_rings: mostRings, highest_gross: highestGross };
+}
 
 export async function GET() {
   const supabase = createServerClient();
@@ -14,6 +59,7 @@ export async function GET() {
     { data: totalActivePlayers },
     { data: latestCompleted },
     { data: handicaps },
+    statsSnapshot,
   ] = await Promise.all([
     supabase.from("settings").select("*").eq("id", 1).single(),
     supabase.from("order_of_merit").select("*").order("position", { ascending: true }).limit(10),
@@ -32,6 +78,7 @@ export async function GET() {
       .order("sort_order", { ascending: false })
       .limit(1),
     supabase.from("player_handicaps").select("*"),
+    getStatsSnapshot(supabase),
   ]);
 
   const qualifiedCount = (qualification || []).filter((q) => q.qualified_for_tour).length;
@@ -88,5 +135,6 @@ export async function GET() {
       highest: highestHandicap,
       largest_adjustment: largestAdjustment,
     },
+    stats_snapshot: statsSnapshot,
   });
 }

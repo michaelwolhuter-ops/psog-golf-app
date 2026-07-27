@@ -273,28 +273,43 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Statistics snapshot */}
+        {/* Statistics snapshot — same numbers as the full Statistics page,
+            just the #1 leader per category instead of a top-5 list. More
+            categories can join this snapshot later; kept to 3 for now per
+            Mike's ask. */}
         <div className="bg-posgcard rounded-xl border border-posgborder p-5">
-          <h2 className="font-semibold text-posgtext mb-3">Statistics Snapshot</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-posgmuted">Most Birdies</div>
-              <div className="text-gold font-semibold">—</div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-posgtext">Statistics Snapshot</h2>
+            <Link href="/statistics" className="text-xs text-fairway hover:underline">
+              View all
+            </Link>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-posgmuted">Most Pars</span>
+              <span className="text-posgtext">
+                {data.stats_snapshot?.most_pars
+                  ? `${data.stats_snapshot.most_pars.name} (${data.stats_snapshot.most_pars.value})`
+                  : '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-posgmuted">Most Wins</div>
-              <div className="text-gold font-semibold">—</div>
+            <div className="flex items-center justify-between">
+              <span className="text-posgmuted">Most Rings</span>
+              <span className="text-posgtext">
+                {data.stats_snapshot?.most_rings
+                  ? `${data.stats_snapshot.most_rings.name} (${data.stats_snapshot.most_rings.value})`
+                  : '—'}
+              </span>
             </div>
-            <div>
-              <div className="text-xs text-posgmuted">Lowest Gross</div>
-              <div className="text-gold font-semibold">—</div>
-            </div>
-            <div>
-              <div className="text-xs text-posgmuted">Best Average</div>
-              <div className="text-gold font-semibold">—</div>
+            <div className="flex items-center justify-between">
+              <span className="text-posgmuted">Highest Gross</span>
+              <span className="text-posgtext">
+                {data.stats_snapshot?.highest_gross
+                  ? `${data.stats_snapshot.highest_gross.name} (${data.stats_snapshot.highest_gross.value})`
+                  : '—'}
+              </span>
             </div>
           </div>
-          <p className="text-xs text-posgmuted mt-3">Live once scorecards exist.</p>
         </div>
       </div>
 
