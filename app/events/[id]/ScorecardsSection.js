@@ -324,11 +324,19 @@ function ScorecardCard({ summary }) {
           </p>
           <p className="text-xs text-posgmuted mt-0.5">{memberNames}</p>
         </div>
+        {/* A real, bigger tap target — this is the button markers hit
+            constantly mid-round, standing on a golf course, often one-
+            handed. A small text link was too easy to miss/mis-tap. */}
         <Link
           href={`/scorecards/${summary.id}`}
-          className="inline-flex items-center gap-1 text-xs text-fairway hover:underline"
+          className={
+            'inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-md transition ' +
+            (summary.status === 'completed'
+              ? 'bg-posgborder text-posgtext hover:bg-posgcardhover'
+              : 'bg-fairway text-black hover:bg-fairwaydark hover:text-white')
+          }
         >
-          {summary.status === 'completed' ? 'Reopen / delete' : 'Resume entry'} <ChevronRight size={12} />
+          {summary.status === 'completed' ? 'Reopen / Delete' : 'Resume Entry'} <ChevronRight size={14} />
         </Link>
       </div>
 

@@ -28,6 +28,7 @@ import {
   matchStatus,
   roundHandicapForStrokes,
 } from '@/lib/scoring';
+import { useConfirm } from '@/lib/useConfirm';
 
 // Same rounding rule used everywhere else a handicap is displayed (dashboard,
 // player profile) — shows the whole-number index actually used to work out
@@ -41,8 +42,8 @@ const QUICK_TAPS = [
   { label: 'Birdie', offset: -1 },
   { label: 'Par', offset: 0 },
   { label: 'Bogey', offset: 1 },
-  { label: 'Double Bogey', offset: 2 },
-  { label: 'Triple Bogey', offset: 3 },
+  { label: 'Double', offset: 2 },
+  { label: 'Triple', offset: 3 },
 ];
 
 const FORMAT_LABEL = {
@@ -65,6 +66,8 @@ export default function ScorecardEntryPage() {
 
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const { confirm, ConfirmDialog } = useConfirm();
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -286,9 +289,10 @@ export default function ScorecardEntryPage() {
   // in_progress so entry works again, without touching any other data.
   async function reopenRound() {
     if (
-      !confirm(
-        "Reopen this round for editing? This removes the points/team result it fed into this event so you can correct and re-finish it."
-      )
+      !(await confirm(
+        "Reopen this round for editing? This removes the points/team result it fed into this event so you can correct and re-finish it.",
+        { confirmLabel: 'Reopen round' }
+      ))
     ) {
       return;
     }
@@ -307,13 +311,14 @@ export default function ScorecardEntryPage() {
   async function deleteScorecard() {
     const verb = scorecard.status === 'completed' ? 'Delete' : 'Abandon';
     if (
-      !confirm(
+      !(await confirm(
         `${verb} this scorecard? ${
           scorecard.status === 'completed'
             ? "This also removes the points/team result it fed into this event."
             : ''
-        } This can't be undone.`
-      )
+        } This can't be undone.`,
+        { confirmLabel: verb }
+      ))
     ) {
       return;
     }
@@ -330,7 +335,12 @@ export default function ScorecardEntryPage() {
   }
 
   async function finishRound() {
-    if (!confirm('Finish this round? This writes the results into the event and can\'t be entered here again.')) {
+    if (
+      !(await confirm(
+        "Finish this round? This writes the results into the event and can't be entered here again.",
+        { confirmLabel: 'Finish round' }
+      ))
+    ) {
       return;
     }
     setFinishing(true);
@@ -365,6 +375,7 @@ export default function ScorecardEntryPage() {
 
   return (
     <div>
+      {ConfirmDialog}
       <Link
         href={`/events/${scorecard.event_id}`}
         className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
@@ -492,16 +503,16 @@ export default function ScorecardEntryPage() {
               const s = strokesReceived(player.tour_handicap, hole.stroke_index);
               return (
                 <div key={player.id} className="bg-posgbg rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-posgtext">{player.name}</span>
-                      <span className="text-xs text-posgmuted font-mono">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-posgtext truncate">{player.name}</span>
+                      <span className="text-xs text-posgmuted font-mono shrink-0">
                         ({fmtHcp(player.tour_handicap)})
                       </span>
                       {isTeamFormat && (
                         <span
                           className={
-                            'text-[10px] px-1.5 py-0.5 rounded font-semibold ' +
+                            'text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ' +
                             (player.team_number === 1
                               ? 'bg-fairway/20 text-fairway'
                               : 'bg-gold/20 text-gold')
@@ -511,27 +522,45 @@ export default function ScorecardEntryPage() {
                         </span>
                       )}
                       {s > 0 && (
-                        <span className="flex gap-0.5" title={`${s} stroke${s > 1 ? 's' : ''} received`}>
+                        <span className="flex gap-0.5 shrink-0" title={`${s} stroke${s > 1 ? 's' : ''} received`}>
                           {Array.from({ length: s }).map((_, i) => (
                             <CircleDot key={i} size={9} className="text-posgmuted" />
                           ))}
                         </span>
                       )}
                     </div>
-                    {gross != null && (
-                      <span className="text-xs text-posgmuted">
-                        Gross <span className="text-posgtext font-mono">{gross}</span>
-                        {rung && (
-                          <span className="text-gold ml-1">
-                            ({rawGross > gross ? `capped, entered ${rawGross}` : 'rung'})
-                          </span>
-                        )}
-                        {three_putt && <span className="text-posgmuted ml-1">(3 putt)</span>} · Pts{' '}
-                        <span className="text-gold font-mono font-semibold">{points}</span>
-                      </span>
-                    )}
+                    <button
+                      onClick={() => toggleThreePutt(player.id)}
+                      className={
+                        'shrink-0 inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
+                        (three_putt
+                          ? 'bg-posgtext text-posgbg'
+                          : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
+                      }
+                      title="Tick if this player 3-putted this hole"
+                    >
+                      <Repeat2 size={12} /> 3 Putt
+                    </button>
                   </div>
 
+                  {gross != null && (
+                    <div className="text-xs text-posgmuted mb-2">
+                      Gross <span className="text-posgtext font-mono">{gross}</span>
+                      {rung && (
+                        <span className="text-gold ml-1">
+                          ({rawGross > gross ? `capped, entered ${rawGross}` : 'rung'})
+                        </span>
+                      )}
+                      {three_putt && <span className="text-posgmuted ml-1">(3 putt)</span>} · Pts{' '}
+                      <span className="text-gold font-mono font-semibold">{points}</span>
+                    </div>
+                  )}
+
+                  {/* One merged row — quick-taps + Ring + More together, in
+                      that order — so it wraps naturally (2 lines on a phone,
+                      1 on desktop) instead of being forced onto a 3rd line
+                      by living in a separate row of its own. Ring sits
+                      before More per Mike's ask. */}
                   <div className="flex flex-wrap gap-1.5">
                     {QUICK_TAPS.map((qt) => {
                       const value = Math.max(1, hole.par + qt.offset);
@@ -552,14 +581,6 @@ export default function ScorecardEntryPage() {
                       );
                     })}
                     <button
-                      onClick={() =>
-                        setExpandedPlayer(expandedPlayer === player.id ? null : player.id)
-                      }
-                      className="text-xs px-2.5 py-1.5 rounded-md font-medium bg-posgborder text-posgmuted hover:bg-posgcardhover transition"
-                    >
-                      More…
-                    </button>
-                    <button
                       onClick={() => tapRing(player.id)}
                       className={
                         'text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
@@ -570,16 +591,12 @@ export default function ScorecardEntryPage() {
                       Ring
                     </button>
                     <button
-                      onClick={() => toggleThreePutt(player.id)}
-                      className={
-                        'inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
-                        (three_putt
-                          ? 'bg-posgtext text-posgbg'
-                          : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
+                      onClick={() =>
+                        setExpandedPlayer(expandedPlayer === player.id ? null : player.id)
                       }
-                      title="Tick if this player 3-putted this hole"
+                      className="text-xs px-2.5 py-1.5 rounded-md font-medium bg-posgborder text-posgmuted hover:bg-posgcardhover transition"
                     >
-                      <Repeat2 size={12} /> 3 Putt
+                      More…
                     </button>
                   </div>
 

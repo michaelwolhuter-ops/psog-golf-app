@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import ScorecardsSection from './ScorecardsSection';
+import { useConfirm } from '@/lib/useConfirm';
 import {
   ArrowLeft,
   Flag,
@@ -14,6 +15,8 @@ import {
   Award,
   ClipboardEdit,
   ClipboardList,
+  Swords,
+  Users2,
 } from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
@@ -48,7 +51,6 @@ export default function EventDetailPage() {
   const router = useRouter();
   const [event, setEvent] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [teams, setTeams] = useState([]);
   const [courses, setCourses] = useState([]);
   const [form, setForm] = useState({}); // player_id -> { points, longest_drive, closest_to_pin }
   const [meta, setMeta] = useState({});
@@ -71,6 +73,8 @@ export default function EventDetailPage() {
   // opening the full event-details form.
   const [bonusOpen, setBonusOpen] = useState(false);
 
+  const { confirm, ConfirmDialog } = useConfirm();
+
   function load() {
     fetch(`/api/events/${id}`, { cache: 'no-store' })
       .then((res) => res.json())
@@ -82,7 +86,6 @@ export default function EventDetailPage() {
         setEvent(body.event);
         setMeta(body.event);
         setPlayers(body.players);
-        setTeams(body.teams || []);
         const f = {};
         body.players.forEach((p) => {
           const r = body.results.find((res) => res.player_id === p.id);
@@ -98,6 +101,27 @@ export default function EventDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  const [liveBoard, setLiveBoard] = useState(null);
+
+  // Same live leaderboard the scorecard entry screen uses — reads straight
+  // from hole_scores across every scorecard for this event (in-progress and
+  // completed alike), so this shows real standings the moment scoring
+  // starts, not "no results yet" until every group finishes. Polled so it
+  // keeps moving while just sitting on this page watching.
+  function loadLiveBoard() {
+    fetch(`/api/events/${id}/live-leaderboard`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((body) => {
+        if (!body.error) setLiveBoard(body);
+      });
+  }
+
+  useEffect(() => {
+    loadLiveBoard();
+    const interval = setInterval(loadLiveBoard, 12000);
+    return () => clearInterval(interval);
+  }, [id]);
 
   // Course list for the picker — separate from the event itself, loaded
   // once. Courses are a shared library (Noodsburg etc.), not per-event data.
@@ -184,7 +208,12 @@ export default function EventDetailPage() {
   }
 
   async function deleteEvent() {
-    if (!confirm(`Delete "${event.name}"? This also removes all its results. This can't be undone.`)) {
+    if (
+      !(await confirm(
+        `Delete "${event.name}"? This also removes all its results. This can't be undone.`,
+        { confirmLabel: 'Delete event' }
+      ))
+    ) {
       return;
     }
     await fetch(`/api/events/${id}`, { method: 'DELETE' });
@@ -206,27 +235,9 @@ export default function EventDetailPage() {
 
   const enteredCount = Object.values(form).filter((v) => v.points !== '' && v.points !== null).length;
 
-  const individualLeaderboard = players
-    .map((p) => ({ ...p, ...form[p.id] }))
-    .filter((p) => p.points !== '' && p.points !== null && p.points !== undefined)
-    .map((p) => ({
-      ...p,
-      overall: Number(p.points) + (p.longest_drive ? 2 : 0) + (p.closest_to_pin ? 2 : 0),
-    }))
-    // Countback win is a manual committee call, not assumed — only breaks a
-    // tie on overall points, never overrides an actual points difference.
-    .sort((a, b) => {
-      if (b.overall !== a.overall) return b.overall - a.overall;
-      return (b.countback_win ? 1 : 0) - (a.countback_win ? 1 : 0);
-    });
-
-  const teamLeaderboard = teams
-    .filter((t) => t.points !== null && t.points !== undefined)
-    .slice()
-    .sort((a, b) => Number(b.points) - Number(a.points));
-
   return (
     <div>
+      {ConfirmDialog}
       <Link
         href="/events"
         className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
@@ -468,142 +479,124 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Read-only leaderboard for this event — individual + team side by side.
-          Scores come in via a digital scorecard ("New Scorecard" above); this
-          table reflects whatever's been completed so far. This is also what
-          regular (non-admin) users will see once real auth exists. */}
+      {/* Live leaderboard — the exact same feed the scorecard entry screen
+          polls, not a "completed only" snapshot. Shows real standings the
+          moment scoring starts (in-progress scorecards included) and
+          naturally becomes the final result once every scorecard for this
+          event is completed — same data, nothing to switch over. */}
       <div className="flex items-center gap-2 mt-8 mb-1">
         <Trophy size={20} className="text-gold" />
         <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
       </div>
-      <p className="text-xs text-posgmuted mb-2">
-        This event's results, from completed scorecards. Use &quot;New Scorecard&quot; above to record a round.
+      <p className="text-xs text-posgmuted mb-4">
+        Live — updates as scorecards are entered. Use &quot;New Scorecard&quot; above to record a round.
       </p>
 
-      {/* Key for the icons used in the Individual table below */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-posgmuted mb-4">
-        <span className="inline-flex items-center gap-1.5">
-          <ArrowUpRight size={13} className="text-fairway" /> Longest Drive
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Crosshair size={13} className="text-gold" /> Closest to the Pin
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Award size={13} className="text-posgmuted" /> Countback Win
-        </span>
+      <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+        <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+          <Trophy size={13} className="text-gold" /> Individual
+        </h3>
+        {!liveBoard ? (
+          <p className="text-posgmuted text-sm">Loading…</p>
+        ) : liveBoard.individual.length === 0 ? (
+          <p className="text-posgmuted text-sm">No scores entered yet.</p>
+        ) : (
+          <div>
+            <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
+              <span>Pos</span>
+              <span>Player</span>
+              <span className="text-center">Thru</span>
+              <span className="text-right">Total</span>
+            </div>
+            {liveBoard.individual.map((row, i) => (
+              <div
+                key={row.player_id}
+                className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
+              >
+                <span
+                  className={
+                    'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
+                    (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                  }
+                >
+                  {i === 0 ? <Trophy size={12} /> : i + 1}
+                </span>
+                <span className="text-posgtext text-sm font-semibold truncate">
+                  {row.name}
+                  {row.longest_drive && (
+                    <ArrowUpRight size={12} className="inline text-fairway ml-1" title="Longest Drive" />
+                  )}
+                  {row.closest_to_pin && (
+                    <Crosshair size={12} className="inline text-gold ml-1" title="Closest to the Pin" />
+                  )}
+                  {row.countback_win && (
+                    <Award size={12} className="inline text-posgmuted ml-1" title="Won on countback" />
+                  )}
+                </span>
+                <span className="text-posgmuted text-xs font-mono text-center">{row.thru ?? '–'}</span>
+                <span className="text-gold font-mono font-bold text-right">{row.overall}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-sm font-semibold text-posgmuted uppercase tracking-wide mb-2">
-            Individual
+      {liveBoard && liveBoard.team.length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Users2 size={13} /> Team
           </h3>
-          {individualLeaderboard.length === 0 ? (
-            <p className="text-posgmuted text-sm">No individual results yet.</p>
-          ) : (
-            <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-                  <tr>
-                    <th className="px-4 py-2 w-10">Pos</th>
-                    <th className="px-4 py-2">Player</th>
-                    <th className="px-4 py-2 text-right">Pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {individualLeaderboard.map((p, i) => (
-                    <tr key={p.id} className="border-b border-posgborder last:border-0">
-                      <td className="px-4 py-2 font-bold text-posgtext">{i + 1}</td>
-                      <td className="px-4 py-2 text-posgtext">
-                        <span className="inline-flex items-center gap-1.5">
-                          {p.name}
-                          {p.longest_drive && (
-                            <ArrowUpRight
-                              size={14}
-                              className="text-fairway"
-                              title="Longest Drive"
-                            />
-                          )}
-                          {p.closest_to_pin && (
-                            <Crosshair
-                              size={14}
-                              className="text-gold"
-                              title="Closest to the Pin"
-                            />
-                          )}
-                          {p.countback_win && (
-                            <Award
-                              size={14}
-                              className="text-posgmuted"
-                              title="Won on countback"
-                            />
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono text-gold font-semibold">
-                        {/* Bonus badge sits before the number, not after —
-                            the cell is right-aligned, so appending it after
-                            the number would shift the number itself left
-                            whenever a bonus is present, making the points
-                            column harder to scan down. Putting it first
-                            keeps the actual points value anchored to the
-                            right edge every time. */}
-                        {(p.longest_drive || p.closest_to_pin) && (
-                          <span
-                            className="text-fairway text-[10px] font-semibold mr-1 align-super"
-                            title={
-                              [p.longest_drive && 'Longest Drive', p.closest_to_pin && 'Closest to the Pin']
-                                .filter(Boolean)
-                                .join(' + ')
-                            }
-                          >
-                            +{(p.longest_drive ? 2 : 0) + (p.closest_to_pin ? 2 : 0)}
-                          </span>
-                        )}
-                        {p.overall}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
+            <span>Pos</span>
+            <span>Team</span>
+            <span className="text-center">Thru</span>
+            <span className="text-right">Total</span>
+          </div>
+          {liveBoard.team.map((t, i) => (
+            <div
+              key={`${t.scorecard_id}-${t.team_number}`}
+              className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
+            >
+              <span
+                className={
+                  'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
+                  (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                }
+              >
+                {i === 0 ? <Trophy size={12} /> : i + 1}
+              </span>
+              <span className="text-posgtext text-sm font-semibold truncate">
+                {t.names}
+                {t.group_label ? <span className="text-posgmuted font-normal"> — {t.group_label}</span> : ''}
+              </span>
+              <span className="text-posgmuted text-xs font-mono text-center">{t.thru ?? '–'}</span>
+              <span className="text-gold font-mono font-bold text-right">{t.points}</span>
             </div>
-          )}
+          ))}
         </div>
+      )}
 
-        <div>
-          <h3 className="text-sm font-semibold text-posgmuted uppercase tracking-wide mb-2">
-            Team
+      {liveBoard && liveBoard.matches.length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Swords size={13} className="text-gold" /> Matches
           </h3>
-          {teamLeaderboard.length === 0 ? (
-            <p className="text-posgmuted text-sm">No team results yet.</p>
-          ) : (
-            <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-                  <tr>
-                    <th className="px-4 py-2 w-10">Pos</th>
-                    <th className="px-4 py-2">Players</th>
-                    <th className="px-4 py-2 text-right">Pts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamLeaderboard.map((t, i) => (
-                    <tr key={t.id} className="border-b border-posgborder last:border-0">
-                      <td className="px-4 py-2 font-bold text-posgtext">{i + 1}</td>
-                      <td className="px-4 py-2 text-posgtext">
-                        {t.members.map((m) => m.name).join(', ')}
-                      </td>
-                      <td className="px-4 py-2 text-right font-mono text-gold font-semibold">
-                        {t.points}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="space-y-1">
+            {liveBoard.matches.map((m) => (
+              <div key={m.scorecard_id} className="flex items-center justify-between text-sm">
+                <span className="text-posgtext">
+                  {m.names_a} <span className="text-posgmuted">vs</span> {m.names_b}
+                  {m.group_label ? <span className="text-posgmuted"> — {m.group_label}</span> : ''}
+                </span>
+                <span className="text-gold font-mono font-semibold">
+                  {m.winningTeam ? (m.winningTeam === 'A' ? m.names_a : m.names_b) + ' ' : ''}
+                  {m.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
