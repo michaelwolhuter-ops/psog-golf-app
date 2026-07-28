@@ -3,7 +3,11 @@ import AppShell from "./AppShell";
 
 export const metadata = {
   title: "POSG Tour",
-  description: "POSG Tour Manager — order of merit, handicaps, events, players",
+  description:
+    "POSG Tour Manager — order of merit, handicaps, events, players. The home of shit golf.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export const viewport = {

@@ -65,11 +65,21 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-posgtext">
-          POSG <span className="text-gold">Tour</span>
-        </h1>
-        <p className="text-posgmuted mt-1">{data.settings?.season_name || 'Season dashboard'}</p>
+      <div className="mb-8 flex flex-col sm:flex-row items-center sm:items-center gap-4 text-center sm:text-left">
+        <img
+          src="/logo.png"
+          alt="POSG Tour"
+          className="h-28 sm:h-32 w-auto drop-shadow-[0_0_24px_rgba(212,175,55,0.35)]"
+        />
+        <div>
+          <h1 className="text-4xl font-bold text-posgtext">
+            POSG <span className="text-gold">Tour</span>
+          </h1>
+          <p className="text-posgmuted mt-1 italic">The home of shit golf</p>
+          <p className="text-posgmuted text-sm mt-0.5">
+            {data.settings?.season_name || 'Season dashboard'}
+          </p>
+        </div>
       </div>
 
       {/* Top summary cards */}

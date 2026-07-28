@@ -14,8 +14,11 @@ export default function AppShell({ children }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      {/* Mobile-only top bar with hamburger — hidden entirely on desktop */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 h-14 bg-posgcard border-b border-posgborder flex items-center px-4">
+      {/* Mobile-only top bar with hamburger — hidden entirely on desktop.
+          Bumped from h-14/h-9 logo to h-20/h-14 so the logo actually reads
+          on a phone screen — see main's pt-28 below, kept in sync with this
+          bar's height. */}
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 h-20 bg-posgcard border-b border-posgborder flex items-center px-4">
         <button
           onClick={() => setOpen(true)}
           aria-label="Open menu"
@@ -23,9 +26,7 @@ export default function AppShell({ children }) {
         >
           <Menu size={22} />
         </button>
-        <div className="ml-2 text-sm font-bold tracking-wide">
-          POSG <span className="text-gold">TOUR</span>
-        </div>
+        <img src="/logo.png" alt="POSG Tour" className="ml-2 h-14 w-auto" />
       </div>
 
       {/* Dark overlay behind the drawer, mobile only, tap to close */}
@@ -38,9 +39,9 @@ export default function AppShell({ children }) {
 
       <Sidebar open={open} onClose={() => setOpen(false)} />
 
-      {/* pt-20 on mobile clears the fixed top bar; md:pt-8 restores the
-          original desktop spacing exactly as it was before this change */}
-      <main className="flex-1 min-w-0 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8 max-w-6xl mx-auto">
+      {/* pt-28 on mobile clears the taller h-20 fixed top bar; md:pt-8
+          restores the original desktop spacing exactly as before */}
+      <main className="flex-1 min-w-0 px-4 py-6 pt-28 md:px-8 md:py-8 md:pt-8 max-w-6xl mx-auto">
         {children}
       </main>
     </div>

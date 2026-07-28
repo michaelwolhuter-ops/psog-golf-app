@@ -46,20 +46,29 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
         " md:translate-x-0 md:static md:sticky md:top-0"
       }
     >
-      <div className="px-5 py-6 border-b border-posgborder flex items-center justify-between">
-        <div>
-          <div className="text-lg font-bold tracking-wide text-posgtext">
-            POSG <span className="text-gold">TOUR</span>
-          </div>
-          <div className="text-xs text-posgmuted mt-0.5">Tour Manager</div>
-        </div>
+      <div className="px-5 pt-6 pb-5 border-b border-posgborder relative">
         <button
           onClick={onClose}
           aria-label="Close menu"
-          className="md:hidden text-posgmuted hover:text-posgtext p-1"
+          className="md:hidden absolute top-4 right-4 text-posgmuted hover:text-posgtext p-1"
         >
           <X size={20} />
         </button>
+        <Link href="/" onClick={onClose} className="flex flex-col items-center text-center gap-2">
+          <img
+            src="/logo.png"
+            alt="POSG Tour"
+            className="h-24 w-auto drop-shadow-[0_0_16px_rgba(212,175,55,0.35)]"
+          />
+          <div>
+            <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
+              POSG <span className="text-gold">TOUR</span>
+            </div>
+            <div className="text-[11px] text-posgmuted italic leading-tight mt-1">
+              The home of shit golf
+            </div>
+          </div>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
