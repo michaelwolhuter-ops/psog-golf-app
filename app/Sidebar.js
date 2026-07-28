@@ -60,13 +60,8 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
             alt="POSG Tour"
             className="h-24 w-auto drop-shadow-[0_0_16px_rgba(212,175,55,0.35)]"
           />
-          <div>
-            <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
-              POSG <span className="text-gold">TOUR</span>
-            </div>
-            <div className="text-[11px] text-posgmuted italic leading-tight mt-1">
-              The home of shit golf
-            </div>
+          <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
+            POSG <span className="text-gold">TOUR</span>
           </div>
         </Link>
       </div>

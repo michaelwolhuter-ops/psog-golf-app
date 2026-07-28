@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
 
@@ -11,13 +12,17 @@ import { Menu } from "lucide-react";
 // breakpoint.
 export default function AppShell({ children }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
 
   return (
     <div className="flex min-h-screen w-full">
       {/* Mobile-only top bar with hamburger — hidden entirely on desktop.
           Bumped from h-14/h-9 logo to h-20/h-14 so the logo actually reads
           on a phone screen — see main's pt-28 below, kept in sync with this
-          bar's height. */}
+          bar's height. Logo is hidden here on the home/dashboard page only,
+          since that page already shows its own big hero logo — showing both
+          was a double-logo on mobile, per Mike. */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 h-20 bg-posgcard border-b border-posgborder flex items-center px-4">
         <button
           onClick={() => setOpen(true)}
@@ -26,7 +31,9 @@ export default function AppShell({ children }) {
         >
           <Menu size={22} />
         </button>
-        <img src="/logo.png" alt="POSG Tour" className="ml-2 h-14 w-auto" />
+        {!isHome && (
+          <img src="/logo.png" alt="POSG Tour" className="ml-2 h-14 w-auto" />
+        )}
       </div>
 
       {/* Dark overlay behind the drawer, mobile only, tap to close */}

@@ -65,14 +65,14 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col sm:flex-row items-center sm:items-center gap-4 text-center sm:text-left">
+      <div className="mb-8 flex items-center gap-4">
         <img
           src="/logo.png"
           alt="POSG Tour"
-          className="h-28 sm:h-32 w-auto drop-shadow-[0_0_24px_rgba(212,175,55,0.35)]"
+          className="h-16 sm:h-32 w-auto shrink-0 drop-shadow-[0_0_24px_rgba(212,175,55,0.35)]"
         />
         <div>
-          <h1 className="text-4xl font-bold text-posgtext">
+          <h1 className="text-2xl sm:text-4xl font-bold text-posgtext">
             POSG <span className="text-gold">Tour</span>
           </h1>
           <p className="text-posgmuted mt-1 italic">The home of shit golf</p>
