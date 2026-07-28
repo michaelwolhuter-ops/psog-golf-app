@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import ScorecardsSection from './ScorecardsSection';
 import { useConfirm } from '@/lib/useConfirm';
+import { useAdmin } from '@/lib/AdminContext';
 import {
   ArrowLeft,
   Flag,
@@ -74,6 +75,7 @@ export default function EventDetailPage() {
   const [bonusOpen, setBonusOpen] = useState(false);
 
   const { confirm, ConfirmDialog } = useConfirm();
+  const { isAdmin } = useAdmin();
 
   function load() {
     fetch(`/api/events/${id}`, { cache: 'no-store' })
@@ -267,25 +269,29 @@ export default function EventDetailPage() {
           >
             <ClipboardList size={14} /> New Scorecard
           </Link>
+          {isAdmin && (
           <button
             onClick={() => setDetailsOpen((v) => !v)}
             className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
           >
             <ClipboardEdit size={14} /> {detailsOpen ? 'Hide Details' : 'Edit Event Details'}
           </button>
+          )}
+          {isAdmin && (
           <button
             onClick={deleteEvent}
             className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
           >
             <Trash2 size={14} /> Delete event
           </button>
+          )}
         </div>
       </div>
       <p className="text-posgmuted mb-6">
         {enteredCount} of {players.length} players have a result recorded.
       </p>
 
-      {detailsOpen && (
+      {isAdmin && detailsOpen && (
       <form
         onSubmit={saveMeta}
         className="bg-posgcard rounded-xl border border-posgborder p-5 mb-8 grid sm:grid-cols-2 gap-4"
@@ -401,13 +407,13 @@ export default function EventDetailPage() {
       {/* Longest Drive / Closest to the Pin / Countback — a scorecard never
           captures these on its own, so this stays a manual step regardless
           of whether a player's points came from a scorecard or were typed
-          in directly. Deliberately separate from "Enter Results" so it
-          doesn't require opening the full event-details + points + team
-          form just to tick one box. */}
+          in directly. Admin-only — these are committee calls, not something
+          players record about themselves. */}
+      {isAdmin && (
+      <>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback{' '}
-          <HiddenLaterTag />
+          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback
         </h2>
         <button
           onClick={() => setBonusOpen((v) => !v)}
@@ -477,6 +483,8 @@ export default function EventDetailPage() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
 
       {/* Live leaderboard — the exact same feed the scorecard entry screen

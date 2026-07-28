@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Users, UserCircle2, ChevronRight } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
+import { useAdmin } from '@/lib/AdminContext';
 
 // Tour Handicap shows the rounded whole number here — same rule
 // strokesReceived() uses on the course — not the raw decimal.
@@ -13,6 +14,7 @@ function fmtHcp(n) {
 }
 
 export default function PlayersPage() {
+  const { isAdmin } = useAdmin();
   const [players, setPlayers] = useState(null);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
@@ -61,18 +63,20 @@ export default function PlayersPage() {
           <Users size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Players</h1>
         </div>
-        <button
-          onClick={() => setFormOpen((v) => !v)}
-          className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
-        >
-          {formOpen ? 'Cancel' : '+ Add player'}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setFormOpen((v) => !v)}
+            className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
+          >
+            {formOpen ? 'Cancel' : '+ Add player'}
+          </button>
+        )}
       </div>
       <p className="text-posgmuted mb-6">
         One row per person — this is the canonical list everything else links to.
       </p>
 
-      {formOpen && (
+      {isAdmin && formOpen && (
         <form
           onSubmit={addPlayer}
           className="bg-posgcard rounded-xl border border-posgborder p-4 mb-6 flex items-end gap-3 flex-wrap"

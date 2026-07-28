@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
+import { AdminProvider } from "@/lib/AdminContext";
 
 // Wraps Sidebar + page content and owns the open/closed state for the
 // mobile drawer. Desktop layout is untouched — the sidebar is always
@@ -16,6 +17,7 @@ export default function AppShell({ children }) {
   const isHome = pathname === "/";
 
   return (
+    <AdminProvider>
     <div className="flex min-h-screen w-full">
       {/* Mobile-only top bar with hamburger — hidden entirely on desktop.
           Bumped from h-14/h-9 logo to h-20/h-14 so the logo actually reads
@@ -52,5 +54,6 @@ export default function AppShell({ children }) {
         {children}
       </main>
     </div>
+    </AdminProvider>
   );
 }

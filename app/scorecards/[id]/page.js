@@ -29,6 +29,7 @@ import {
   roundHandicapForStrokes,
 } from '@/lib/scoring';
 import { useConfirm } from '@/lib/useConfirm';
+import { useAdmin } from '@/lib/AdminContext';
 
 // Same rounding rule used everywhere else a handicap is displayed (dashboard,
 // player profile) — shows the whole-number index actually used to work out
@@ -68,6 +69,7 @@ export default function ScorecardEntryPage() {
   const [deleting, setDeleting] = useState(false);
 
   const { confirm, ConfirmDialog } = useConfirm();
+  const { isAdmin } = useAdmin();
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -373,15 +375,31 @@ export default function ScorecardEntryPage() {
     if (results.length > 0) liveMatch = matchStatus(results);
   }
 
+  // Players only get "Back to event" once this round is actually finished
+  // (or if they're admin) — otherwise the live leaderboard already shown
+  // right here covers everything they'd need the event page for, and it
+  // closes off the easiest accidental way to wander into someone else's
+  // in-progress card and start tapping scores into it. Worth knowing this
+  // is a nudge, not a real lock: the sidebar's Events & Results link still
+  // reaches every other scorecard regardless, since there's no per-player
+  // login in this app to actually restrict that.
+  const canLeave = isAdmin || scorecard.status === 'completed';
+
   return (
     <div>
       {ConfirmDialog}
-      <Link
-        href={`/events/${scorecard.event_id}`}
-        className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
-      >
-        <ArrowLeft size={14} /> Back to event
-      </Link>
+      {canLeave ? (
+        <Link
+          href={`/events/${scorecard.event_id}`}
+          className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
+        >
+          <ArrowLeft size={14} /> Back to event
+        </Link>
+      ) : (
+        <p className="text-xs text-posgmuted mb-4">
+          Finish this round to head back to the event.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
@@ -392,13 +410,15 @@ export default function ScorecardEntryPage() {
         </div>
         <div className="flex items-center gap-2">
           {scorecard.status === 'completed' ? (
-            <button
-              onClick={reopenRound}
-              disabled={reopening}
-              className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition disabled:opacity-50"
-            >
-              <RotateCcw size={14} /> {reopening ? 'Reopening…' : 'Reopen round'}
-            </button>
+            isAdmin && (
+              <button
+                onClick={reopenRound}
+                disabled={reopening}
+                className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition disabled:opacity-50"
+              >
+                <RotateCcw size={14} /> {reopening ? 'Reopening…' : 'Reopen round'}
+              </button>
+            )
           ) : (
             <button
               onClick={finishRound}
@@ -408,6 +428,7 @@ export default function ScorecardEntryPage() {
               <Trophy size={14} /> {finishing ? 'Finishing…' : 'Finish Round'}
             </button>
           )}
+          {(scorecard.status !== 'completed' || isAdmin) && (
           <button
             onClick={deleteScorecard}
             disabled={deleting}
@@ -416,6 +437,7 @@ export default function ScorecardEntryPage() {
           >
             <Trash2 size={14} /> {deleting ? 'Deleting…' : scorecard.status === 'completed' ? 'Delete' : 'Abandon'}
           </button>
+          )}
         </div>
       </div>
       <p className="text-posgmuted text-sm mb-4">
@@ -424,9 +446,10 @@ export default function ScorecardEntryPage() {
 
       {scorecard.status === 'completed' && (
         <div className="bg-fairway/10 border border-fairway/30 rounded-xl p-3 mb-6 text-sm text-fairway">
-          This round is finished and has already fed its results into the event. Use
-          &quot;Reopen round&quot; above to correct a mistake, or view the full card on the
-          event page.
+          This round is finished and has already fed its results into the event.{' '}
+          {isAdmin
+            ? 'Use "Reopen round" above to correct a mistake, or view the full card on the event page.'
+            : 'View the full card on the event page.'}
         </div>
       )}
 

@@ -35,6 +35,8 @@ import {
   CircleSlash,
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
+import { useAdmin } from '@/lib/AdminContext';
+import { useConfirm } from '@/lib/useConfirm';
 
 function fmt(n) {
   if (n === null || n === undefined) return '—';
@@ -56,15 +58,15 @@ const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
 export default function PlayerProfilePage() {
   const { id } = useParams();
   const router = useRouter();
+  const { isAdmin } = useAdmin();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   // Admin-only profile fields (name, nickname, handicap prediction, committee
-  // adjustment, active status). In V1 there's no auth so this "Edit" panel is
-  // open to anyone with the link — but once the Player Version ships with
-  // auth, this whole button + form should be hidden from non-admins. Players
-  // never edit their own name or Committee Adjustment; they only ever touch
-  // their Index and their Rounds (both handled separately below).
+  // adjustment, active status). Players never edit their own name or
+  // Committee Adjustment; they only ever touch their Index and their Rounds
+  // (both handled separately below, and stay open to everyone).
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -163,14 +165,12 @@ export default function PlayerProfilePage() {
     load();
   }
 
-  // TODO(auth): once the Player Version ships, this delete action (and the
-  // Edit button above) should be admin-only — players can never delete or
-  // rename their own profile.
   async function deletePlayer() {
     if (
-      !confirm(
-        `Delete ${player.name}? This also removes their rounds, results and history. This can't be undone.`
-      )
+      !(await confirm(
+        `Delete ${player.name}? This also removes their rounds, results and history. This can't be undone.`,
+        { confirmLabel: 'Delete player' }
+      ))
     ) {
       return;
     }
@@ -217,6 +217,7 @@ export default function PlayerProfilePage() {
 
   return (
     <div>
+      {ConfirmDialog}
       <Link
         href="/players"
         className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
@@ -249,27 +250,28 @@ export default function PlayerProfilePage() {
             )}
           </div>
         </div>
-        {/* Admin-only controls — hide both buttons from players once auth ships */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setForm(player);
-              setEditing((v) => !v);
-            }}
-            className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
-          >
-            <Pencil size={14} /> {editing ? 'Cancel' : 'Edit'}
-          </button>
-          <button
-            onClick={deletePlayer}
-            className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
-          >
-            <Trash2 size={14} /> Delete
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setForm(player);
+                setEditing((v) => !v);
+              }}
+              className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+            >
+              <Pencil size={14} /> {editing ? 'Cancel' : 'Edit'}
+            </button>
+            <button
+              onClick={deletePlayer}
+              className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          </div>
+        )}
       </div>
 
-      {editing && (
+      {isAdmin && editing && (
         <form
           onSubmit={saveProfile}
           className="bg-posgcard rounded-xl border border-posgborder p-5 mb-8 grid sm:grid-cols-2 gap-4"

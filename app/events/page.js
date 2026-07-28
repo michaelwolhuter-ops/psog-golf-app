@@ -13,6 +13,7 @@ import {
   Users,
   ListOrdered,
 } from 'lucide-react';
+import { useAdmin } from '@/lib/AdminContext';
 
 const typeLabel = {
   qualifier: 'Qualifier',
@@ -37,6 +38,7 @@ function badgeStyle(eventType) {
 
 export default function EventsPage() {
   const router = useRouter();
+  const { isAdmin } = useAdmin();
   const [events, setEvents] = useState(null);
   const [qualification, setQualification] = useState([]);
   const [error, setError] = useState('');
@@ -130,25 +132,27 @@ export default function EventsPage() {
           <Flag size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Events &amp; Results</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setReorderOpen((v) => !v)}
-            className={
-              'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition ' +
-              (reorderOpen
-                ? 'bg-fairway/15 text-fairway'
-                : 'bg-posgborder text-posgtext hover:bg-posgcardhover')
-            }
-          >
-            <ListOrdered size={14} /> {reorderOpen ? 'Done' : 'Edit Order'}
-          </button>
-          <button
-            onClick={() => setFormOpen((v) => !v)}
-            className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
-          >
-            {formOpen ? 'Cancel' : '+ Add event'}
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setReorderOpen((v) => !v)}
+              className={
+                'inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md transition ' +
+                (reorderOpen
+                  ? 'bg-fairway/15 text-fairway'
+                  : 'bg-posgborder text-posgtext hover:bg-posgcardhover')
+              }
+            >
+              <ListOrdered size={14} /> {reorderOpen ? 'Done' : 'Edit Order'}
+            </button>
+            <button
+              onClick={() => setFormOpen((v) => !v)}
+              className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
+            >
+              {formOpen ? 'Cancel' : '+ Add event'}
+            </button>
+          </div>
+        )}
       </div>
       <p className="text-posgmuted mb-4">
         Four qualifiers, then Tour Day 1 and 2. Attend 2 of the 4 qualifiers to make tour.
@@ -183,7 +187,7 @@ export default function EventsPage() {
         </div>
       )}
 
-      {formOpen && (
+      {isAdmin && formOpen && (
         <form
           onSubmit={addEvent}
           className="bg-posgcard rounded-xl border border-posgborder p-4 mb-6 flex items-end gap-3 flex-wrap"
@@ -250,7 +254,7 @@ export default function EventsPage() {
                   </span>
                 )}
 
-                {reorderOpen && (
+                {isAdmin && reorderOpen && (
                   <div
                     className="flex flex-col -my-1 shrink-0"
                     onClick={(evt) => evt.stopPropagation()}

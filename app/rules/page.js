@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { BookOpen, Trash2, Plus } from 'lucide-react';
+import { useAdmin } from '@/lib/AdminContext';
+import { useConfirm } from '@/lib/useConfirm';
 
 export default function RulesPage() {
+  const { isAdmin } = useAdmin();
+  const { confirm, ConfirmDialog } = useConfirm();
   const [sections, setSections] = useState(null);
   const [error, setError] = useState('');
   const [drafts, setDrafts] = useState({});
@@ -57,30 +61,35 @@ export default function RulesPage() {
   }
 
   async function deleteSection(id, title) {
-    if (!confirm(`Delete the "${title}" section?`)) return;
+    if (!(await confirm(`Delete the "${title}" section?`, { confirmLabel: 'Delete section' }))) return;
     await fetch(`/api/rules?id=${id}`, { method: 'DELETE' });
     load();
   }
 
   return (
     <div>
+      {ConfirmDialog}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <BookOpen size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Rules &amp; Information</h1>
         </div>
-        <button
-          onClick={() => setAddingOpen((v) => !v)}
-          className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
-        >
-          {addingOpen ? 'Cancel' : '+ Add section'}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setAddingOpen((v) => !v)}
+            className="text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition"
+          >
+            {addingOpen ? 'Cancel' : '+ Add section'}
+          </button>
+        )}
       </div>
       <p className="text-posgmuted mb-6">
-        Editable straight here — no code changes needed to update the tour&apos;s rules.
+        {isAdmin
+          ? "Editable straight here — no code changes needed to update the tour's rules."
+          : "The tour's rules and information."}
       </p>
 
-      {addingOpen && (
+      {isAdmin && addingOpen && (
         <form
           onSubmit={addSection}
           className="bg-posgcard rounded-xl border border-posgborder p-4 mb-6 flex items-end gap-3"
@@ -114,28 +123,38 @@ export default function RulesPage() {
             <div key={s.id} className="bg-posgcard rounded-xl border border-posgborder p-5">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold text-gold">{s.section}</h2>
-                <button
-                  onClick={() => deleteSection(s.id, s.section)}
-                  className="text-posgmuted hover:text-red-400"
-                  title="Delete section"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => deleteSection(s.id, s.section)}
+                    className="text-posgmuted hover:text-red-400"
+                    title="Delete section"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
-              <textarea
-                value={drafts[s.id] ?? ''}
-                onChange={(e) => setDrafts({ ...drafts, [s.id]: e.target.value })}
-                rows={4}
-                placeholder={`Write ${s.section.toLowerCase()} here…`}
-                className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-2 text-sm text-posgtext"
-              />
-              <button
-                onClick={() => save(s.id)}
-                disabled={savingId === s.id}
-                className="mt-2 text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition disabled:opacity-50"
-              >
-                {savingId === s.id ? 'Saving…' : 'Save'}
-              </button>
+              {isAdmin ? (
+                <>
+                  <textarea
+                    value={drafts[s.id] ?? ''}
+                    onChange={(e) => setDrafts({ ...drafts, [s.id]: e.target.value })}
+                    rows={4}
+                    placeholder={`Write ${s.section.toLowerCase()} here…`}
+                    className="w-full bg-posgbg border border-posgborder rounded-md px-3 py-2 text-sm text-posgtext"
+                  />
+                  <button
+                    onClick={() => save(s.id)}
+                    disabled={savingId === s.id}
+                    className="mt-2 text-sm bg-fairway text-black font-medium px-3 py-1.5 rounded-md hover:bg-fairwaydark hover:text-white transition disabled:opacity-50"
+                  >
+                    {savingId === s.id ? 'Saving…' : 'Save'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-posgtext whitespace-pre-line">
+                  {s.body || <span className="text-posgmuted">Nothing written here yet.</span>}
+                </p>
+              )}
             </div>
           ))}
         </div>
