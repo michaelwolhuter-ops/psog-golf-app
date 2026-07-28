@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { fetchHoleRowsWithPar, aggregateHoleStats, deriveRoundExtremes } from "@/lib/statHelpers";
+import {
+  fetchHoleRowsWithPar,
+  aggregateHoleStats,
+  deriveRoundExtremes,
+  getEventPositions,
+} from "@/lib/statHelpers";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +65,7 @@ export async function GET() {
     { data: latestCompleted },
     { data: handicaps },
     statsSnapshot,
+    eventPositions,
   ] = await Promise.all([
     supabase.from("settings").select("*").eq("id", 1).single(),
     supabase.from("order_of_merit").select("*").order("position", { ascending: true }).limit(10),
@@ -79,26 +85,35 @@ export async function GET() {
       .limit(1),
     supabase.from("player_handicaps").select("*"),
     getStatsSnapshot(supabase),
+    getEventPositions(supabase),
   ]);
 
   const qualifiedCount = (qualification || []).filter((q) => q.qualified_for_tour).length;
   const totalPlayers = (totalActivePlayers || []).length;
 
+  // Ranked by the same shared getEventPositions() the Events leaderboard and
+  // every player's Results History already use — NOT a local re-sort here.
+  // A local "points + bonus" sort with no countback tiebreak used to live in
+  // this file, and it silently disagreed with the real event position
+  // whenever two players tied on points: whoever Supabase happened to return
+  // first won the tie, instead of whoever actually won the countback. Caught
+  // 2026-07-28 (Ross Drogemoller shown 1st here despite finishing 2nd on
+  // countback everywhere else in the app).
   let latestResults = null;
   if (latestCompleted && latestCompleted.length > 0) {
     const event = latestCompleted[0];
     const { data: results } = await supabase
       .from("event_results")
-      .select("points, longest_drive, closest_to_pin, players(id, name)")
+      .select("points, players(id, name)")
       .eq("event_id", event.id);
 
     const ranked = (results || [])
-      .filter((r) => r.points !== null)
+      .filter((r) => r.points !== null && r.players?.id)
       .map((r) => ({
-        name: r.players?.name,
-        overall: (r.points || 0) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
+        name: r.players.name,
+        position: eventPositions[`${event.id}|${r.players.id}`] ?? Infinity,
       }))
-      .sort((a, b) => b.overall - a.overall);
+      .sort((a, b) => a.position - b.position);
 
     latestResults = { event, top3: ranked.slice(0, 3) };
   }

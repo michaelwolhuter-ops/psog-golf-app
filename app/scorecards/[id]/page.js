@@ -26,7 +26,16 @@ import {
   betterBallHolePoints,
   matchPlayHoleResult,
   matchStatus,
+  roundHandicapForStrokes,
 } from '@/lib/scoring';
+
+// Same rounding rule used everywhere else a handicap is displayed (dashboard,
+// player profile) — shows the whole-number index actually used to work out
+// strokes on this hole, not the raw decimal.
+function fmtHcp(n) {
+  const r = roundHandicapForStrokes(n);
+  return r === null || r === undefined ? '—' : String(r);
+}
 
 const QUICK_TAPS = [
   { label: 'Birdie', offset: -1 },
@@ -486,6 +495,9 @@ export default function ScorecardEntryPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-posgtext">{player.name}</span>
+                      <span className="text-xs text-posgmuted font-mono">
+                        ({fmtHcp(player.tour_handicap)})
+                      </span>
                       {isTeamFormat && (
                         <span
                           className={
