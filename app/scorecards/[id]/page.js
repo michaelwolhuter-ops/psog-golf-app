@@ -30,6 +30,7 @@ import {
 } from '@/lib/scoring';
 import { useConfirm } from '@/lib/useConfirm';
 import { useAdmin } from '@/lib/AdminContext';
+import { useScorecardLock } from '@/lib/ScorecardLockContext';
 
 // Same rounding rule used everywhere else a handicap is displayed (dashboard,
 // player profile) — shows the whole-number index actually used to work out
@@ -70,6 +71,7 @@ export default function ScorecardEntryPage() {
 
   const { confirm, ConfirmDialog } = useConfirm();
   const { isAdmin } = useAdmin();
+  const { setLocked } = useScorecardLock();
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -139,6 +141,17 @@ export default function ScorecardEntryPage() {
     const interval = setInterval(() => loadLiveBoard(scorecard.event_id), 12000);
     return () => clearInterval(interval);
   }, [scorecard?.event_id]);
+
+  // The actual nav lock: while a non-admin has this round open and it's
+  // still in progress, Sidebar disables its other links (see Sidebar.js) so
+  // they can't wander off to Dashboard/Events and open a different group's
+  // scorecard. Clears itself the moment the round finishes, an admin logs
+  // in, or this page is left (cleanup fires on unmount either way).
+  useEffect(() => {
+    if (!scorecard) return;
+    setLocked(!isAdmin && scorecard.status === 'in_progress');
+    return () => setLocked(false);
+  }, [isAdmin, scorecard?.status, setLocked]);
 
   const hole = useMemo(
     () => course?.holes?.find((h) => h.hole_number === currentHole),
@@ -377,12 +390,13 @@ export default function ScorecardEntryPage() {
 
   // Players only get "Back to event" once this round is actually finished
   // (or if they're admin) — otherwise the live leaderboard already shown
-  // right here covers everything they'd need the event page for, and it
-  // closes off the easiest accidental way to wander into someone else's
-  // in-progress card and start tapping scores into it. Worth knowing this
-  // is a nudge, not a real lock: the sidebar's Events & Results link still
-  // reaches every other scorecard regardless, since there's no per-player
-  // login in this app to actually restrict that.
+  // right here covers everything they'd need the event page for. The
+  // sidebar's other links are also disabled while this is open (see the
+  // setLocked effect above + Sidebar.js), so this isn't just a nudge —
+  // finishing the round is the only way out for a non-admin. Still not a
+  // real per-player lock though: nothing stops a different phone from
+  // opening a fresh event page and tapping into someone else's scorecard
+  // from scratch (no login exists to tie a device to a player).
   const canLeave = isAdmin || scorecard.status === 'completed';
 
   return (
