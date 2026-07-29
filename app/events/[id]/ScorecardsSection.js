@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardList, Swords, ChevronRight } from 'lucide-react';
 import { strokesReceived, betterBallHolePoints, roundHandicapForStrokes } from '@/lib/scoring';
+import { useAdmin } from '@/lib/AdminContext';
 
 // Tour Handicap shown under each player's name is the rounded whole number
 // — same rule strokesReceived() uses for actual stroke allocation — not the
@@ -67,6 +68,7 @@ function GrossCell({ value, par, rung }) {
 // Order of Merit reads event_results directly and computes it independently
 // of what any particular page displays.
 function ScorecardTable({ detail }) {
+  const { isAdmin } = useAdmin();
   const holes = detail.course.holes;
   const front = holes.filter((h) => h.hole_number <= 9);
   const back = holes.filter((h) => h.hole_number > 9);
@@ -281,11 +283,13 @@ function ScorecardTable({ detail }) {
           ))}
         </tbody>
       </table>
+      {isAdmin && (
       <p className="text-[10px] text-posgmuted px-3 py-2">
         ○ birdie · ◎ eagle or better · □ bogey · ◫ double bogey or worse · plain = par (based on gross vs.
         par) · * = picked up (rung) · TOTAL/NET are gross-round figures, PTS is the round&apos;s raw
         stableford total (Longest Drive / Closest to the Pin bonus shown on the Event Leaderboard, not here)
       </p>
+      )}
     </div>
   );
 }
@@ -370,6 +374,7 @@ function ScorecardCard({ summary }) {
 // actual played round, distinct from the read-only course layout view and
 // from the event's manual points-entry Results table below it.
 export default function ScorecardsSection({ eventId }) {
+  const { isAdmin } = useAdmin();
   const [scorecards, setScorecards] = useState(null);
 
   useEffect(() => {
@@ -385,10 +390,12 @@ export default function ScorecardsSection({ eventId }) {
       <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2 mb-2">
         <ClipboardList size={17} className="text-fairway" /> Scorecards
       </h2>
+      {isAdmin && (
       <p className="text-xs text-posgmuted mb-3">
         Every digital scorecard entered for this event, hole by hole. Individual results below feed
         Order of Merit once a round is finished.
       </p>
+      )}
       {scorecards.map((sc) => (
         <ScorecardCard key={sc.id} summary={sc} />
       ))}

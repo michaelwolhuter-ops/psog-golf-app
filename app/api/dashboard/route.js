@@ -104,13 +104,24 @@ export async function GET() {
     const event = latestCompleted[0];
     const { data: results } = await supabase
       .from("event_results")
-      .select("points, players(id, name)")
+      .select("points, longest_drive, closest_to_pin, players(id, name)")
       .eq("event_id", event.id);
 
+    // `overall` (points + LD/CTP bonus) is recomputed here purely for
+    // display — it's the same formula getEventPositions() uses internally,
+    // just not something that helper returns. `position` (the actual sort
+    // key) still comes only from the shared getEventPositions(), so the
+    // countback-aware ranking can't drift from every other ranking surface.
+    // Bug fixed 2026-07-29: this card's points column went blank after the
+    // 2026-07-28 countback-order fix — that fix stopped selecting
+    // longest_drive/closest_to_pin and never carried `overall` into the
+    // mapped object at all, so `position` was right but there was no points
+    // value left to show.
     const ranked = (results || [])
       .filter((r) => r.points !== null && r.players?.id)
       .map((r) => ({
         name: r.players.name,
+        overall: Number(r.points) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
         position: eventPositions[`${event.id}|${r.players.id}`] ?? Infinity,
       }))
       .sort((a, b) => a.position - b.position);

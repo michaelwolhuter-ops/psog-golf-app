@@ -411,11 +411,13 @@ export default function PlayerProfilePage() {
         </div>
       </div>
 
+      {isAdmin && (
       <p className="text-xs text-posgmuted mb-3">
         {hole_stats?.full_rounds_counted
           ? `From ${hole_stats.full_rounds_counted} full 18-hole round${hole_stats.full_rounds_counted === 1 ? '' : 's'} played (rounds ended early by match play aren’t compared here). Eagles/Birdies/Pars/Rings/3 Putts count every hole played, including unfinished rounds.`
           : 'No full 18-hole rounds recorded yet via the digital scorecard.'}
       </p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">

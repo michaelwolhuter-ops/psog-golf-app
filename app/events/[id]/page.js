@@ -287,9 +287,11 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
+      {isAdmin && (
       <p className="text-posgmuted mb-6">
         {enteredCount} of {players.length} players have a result recorded.
       </p>
+      )}
 
       {isAdmin && detailsOpen && (
       <form
@@ -399,106 +401,29 @@ export default function EventDetailPage() {
       </form>
       )}
 
-      {/* The actual played scorecards for this event, hole by hole — separate
-          from (and shown above) the results leaderboard below, per Mike's
-          request: see the real card first, the summary standings after. */}
-      <ScorecardsSection eventId={id} />
-
-      {/* Longest Drive / Closest to the Pin / Countback — a scorecard never
-          captures these on its own, so this stays a manual step regardless
-          of whether a player's points came from a scorecard or were typed
-          in directly. Admin-only — these are committee calls, not something
-          players record about themselves. */}
-      {isAdmin && (
-      <>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback
-        </h2>
-        <button
-          onClick={() => setBonusOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
-        >
-          {bonusOpen ? 'Hide' : 'Enter'}
-        </button>
-      </div>
-
-      {bonusOpen && (
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
-          {savedAt && (
-            <p className="text-xs text-posgmuted px-4 pt-3">Saved {savedAt.toLocaleTimeString()}</p>
-          )}
-          {resultsError && <p className="text-red-400 text-sm px-4 pt-3">{resultsError}</p>}
-          <table className="w-full text-sm">
-            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-              <tr>
-                <th className="px-4 py-3">Player</th>
-                <th className="px-4 py-3 text-center w-32">Longest Drive</th>
-                <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
-                <th className="px-4 py-3 text-center w-24">Countback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map((p) => {
-                const hasResult = form[p.id]?.points !== '' && form[p.id]?.points !== null && form[p.id]?.points !== undefined;
-                return (
-                  <tr key={p.id} className="border-b border-posgborder last:border-0">
-                    <td className="px-4 py-2 text-posgtext">
-                      {p.name}
-                      {!hasResult && (
-                        <span className="block text-[10px] text-posgmuted">No result yet — enter a score first</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        disabled={!hasResult}
-                        checked={!!form[p.id]?.longest_drive}
-                        onChange={(e) => saveResultField(p.id, 'longest_drive', e.target.checked)}
-                        className="accent-fairway w-4 h-4 disabled:opacity-30"
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        disabled={!hasResult}
-                        checked={!!form[p.id]?.closest_to_pin}
-                        onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
-                        className="accent-fairway w-4 h-4 disabled:opacity-30"
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        disabled={!hasResult}
-                        checked={!!form[p.id]?.countback_win}
-                        onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
-                        className="accent-gold w-4 h-4 disabled:opacity-30"
-                        title="Tick if the committee decided this player wins a tie on points"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* Event Leaderboard — moved above Scorecards 2026-07-29 per Mike:
+          the standings are what people want to see first when opening an
+          event, the individual scorecards are secondary. Same live feed as
+          before (see the loadLiveBoard effect above), just repositioned.
+          Heading simplified to a right-aligned LIVE pill (only while the
+          event is actually in_progress) instead of a caption sentence
+          underneath — dropped once the event is completed, since at that
+          point this is the final result, not something still updating. */}
+      <div className="flex items-center justify-between mt-2 mb-4">
+        <div className="flex items-center gap-2">
+          <Trophy size={20} className="text-gold" />
+          <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
         </div>
-      )}
-      </>
-      )}
-
-      {/* Live leaderboard — the exact same feed the scorecard entry screen
-          polls, not a "completed only" snapshot. Shows real standings the
-          moment scoring starts (in-progress scorecards included) and
-          naturally becomes the final result once every scorecard for this
-          event is completed — same data, nothing to switch over. */}
-      <div className="flex items-center gap-2 mt-8 mb-1">
-        <Trophy size={20} className="text-gold" />
-        <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
+        {event.status === 'in_progress' && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-400 tracking-wide">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+            LIVE
+          </span>
+        )}
       </div>
-      <p className="text-xs text-posgmuted mb-4">
-        Live — updates as scorecards are entered. Use &quot;New Scorecard&quot; above to record a round.
-      </p>
 
       <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
         <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
@@ -585,7 +510,7 @@ export default function EventDetailPage() {
       )}
 
       {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-8">
           <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Swords size={13} className="text-gold" /> Matches
           </h3>
@@ -605,6 +530,94 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
+
+      {/* The actual played scorecards for this event, hole by hole — shown
+          below the standings now (was above until 2026-07-29). */}
+      <ScorecardsSection eventId={id} />
+
+      {/* Longest Drive / Closest to the Pin / Countback — a scorecard never
+          captures these on its own, so this stays a manual step regardless
+          of whether a player's points came from a scorecard or were typed
+          in directly. Admin-only — these are committee calls, not something
+          players record about themselves. */}
+      {isAdmin && (
+      <>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
+          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback
+        </h2>
+        <button
+          onClick={() => setBonusOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+        >
+          {bonusOpen ? 'Hide' : 'Enter'}
+        </button>
+      </div>
+
+      {bonusOpen && (
+        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-8">
+          {savedAt && (
+            <p className="text-xs text-posgmuted px-4 pt-3">Saved {savedAt.toLocaleTimeString()}</p>
+          )}
+          {resultsError && <p className="text-red-400 text-sm px-4 pt-3">{resultsError}</p>}
+          <table className="w-full text-sm">
+            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
+              <tr>
+                <th className="px-4 py-3">Player</th>
+                <th className="px-4 py-3 text-center w-32">Longest Drive</th>
+                <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
+                <th className="px-4 py-3 text-center w-24">Countback</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map((p) => {
+                const hasResult = form[p.id]?.points !== '' && form[p.id]?.points !== null && form[p.id]?.points !== undefined;
+                return (
+                  <tr key={p.id} className="border-b border-posgborder last:border-0">
+                    <td className="px-4 py-2 text-posgtext">
+                      {p.name}
+                      {!hasResult && (
+                        <span className="block text-[10px] text-posgmuted">No result yet — enter a score first</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.longest_drive}
+                        onChange={(e) => saveResultField(p.id, 'longest_drive', e.target.checked)}
+                        className="accent-fairway w-4 h-4 disabled:opacity-30"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.closest_to_pin}
+                        onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
+                        className="accent-fairway w-4 h-4 disabled:opacity-30"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.countback_win}
+                        onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
+                        className="accent-gold w-4 h-4 disabled:opacity-30"
+                        title="Tick if the committee decided this player wins a tie on points"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      </>
+      )}
+
     </div>
   );
 }

@@ -72,9 +72,11 @@ export default function PlayersPage() {
           </button>
         )}
       </div>
+      {isAdmin && (
       <p className="text-posgmuted mb-6">
         One row per person — this is the canonical list everything else links to.
       </p>
+      )}
 
       {isAdmin && formOpen && (
         <form
