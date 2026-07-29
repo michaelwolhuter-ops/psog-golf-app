@@ -16,6 +16,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
+import AdminLock from '@/app/AdminLock';
 
 function daysUntil(dateStr) {
   if (!dateStr) return null;
@@ -65,21 +66,24 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center gap-4">
-        <img
-          src="/logo.png"
-          alt="POSG Tour"
-          className="h-16 sm:h-32 w-auto shrink-0 drop-shadow-[0_0_24px_rgba(212,175,55,0.35)]"
-        />
-        <div>
-          <h1 className="text-2xl sm:text-4xl font-bold text-posgtext">
-            POSG <span className="text-gold">Tour</span>
-          </h1>
-          <p className="text-posgmuted mt-1 italic">The home of shit golf</p>
-          <p className="text-posgmuted text-sm mt-0.5">
-            {data.settings?.season_name || 'Season dashboard'}
-          </p>
+      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <img
+            src="/logo.png"
+            alt="POSG Tour"
+            className="h-16 sm:h-32 w-auto shrink-0 drop-shadow-[0_0_24px_rgba(212,175,55,0.35)]"
+          />
+          <div>
+            <h1 className="text-2xl sm:text-4xl font-bold text-posgtext">
+              POSG <span className="text-gold">Tour</span>
+            </h1>
+            <p className="text-posgmuted mt-1 italic">The home of shit golf</p>
+            <p className="text-posgmuted text-sm mt-0.5">
+              {data.settings?.season_name || 'Season dashboard'}
+            </p>
+          </div>
         </div>
+        <AdminLock compact />
       </div>
 
       {/* Top summary cards */}

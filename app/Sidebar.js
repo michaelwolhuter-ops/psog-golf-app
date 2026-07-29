@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,11 +12,9 @@ import {
   BookOpen,
   Settings as SettingsIcon,
   X,
-  Lock,
-  Unlock,
 } from "lucide-react";
-import { useAdmin } from "@/lib/AdminContext";
 import { useScorecardLock } from "@/lib/ScorecardLockContext";
+import AdminLock from "@/app/AdminLock";
 
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -39,98 +36,11 @@ const links = [
 // On desktop the sidebar is always shown via the md:translate-x-0 /
 // md:static overrides below, exactly as it was before mobile support
 // was added — nothing here changes desktop appearance or behaviour.
-// Small inline unlock control, not a full-page login — matches "a little
-// lock that opens the hidden stuff on the page" per Mike. Lives in the
-// sidebar footer so it's reachable from anywhere, and stays unlocked across
-// every page once entered (see lib/AdminContext.js).
-function AdminLock({ onClose }) {
-  const { isAdmin, login, logout } = useAdmin();
-  const [entering, setEntering] = useState(false);
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [checking, setChecking] = useState(false);
-
-  if (isAdmin) {
-    return (
-      <div className="flex items-center justify-between text-xs">
-        <span className="inline-flex items-center gap-1.5 text-fairway font-semibold">
-          <Unlock size={13} /> Admin
-        </span>
-        <button
-          onClick={() => {
-            logout();
-            onClose();
-          }}
-          className="text-posgmuted hover:text-red-400 transition"
-        >
-          Log out
-        </button>
-      </div>
-    );
-  }
-
-  if (!entering) {
-    return (
-      <button
-        onClick={() => setEntering(true)}
-        className="w-full flex items-center justify-between text-xs text-posgmuted hover:text-posgtext transition"
-      >
-        Player Version
-        <span className="inline-flex items-center gap-1"><Lock size={12} /> Admin</span>
-      </button>
-    );
-  }
-
-  async function submit(e) {
-    e.preventDefault();
-    setChecking(true);
-    setError('');
-    const ok = await login(password);
-    setChecking(false);
-    if (!ok) {
-      setError('Wrong password');
-      return;
-    }
-    setPassword('');
-    setEntering(false);
-    onClose();
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-1.5">
-      <input
-        type="password"
-        autoFocus
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Admin password"
-        className="w-full bg-posgbg border border-posgborder rounded-md px-2.5 py-1.5 text-xs text-posgtext"
-      />
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={checking || !password}
-          className="text-xs bg-fairway text-black font-semibold px-2.5 py-1 rounded-md disabled:opacity-50"
-        >
-          {checking ? '…' : 'Unlock'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setEntering(false);
-            setError('');
-            setPassword('');
-          }}
-          className="text-xs text-posgmuted hover:text-posgtext transition"
-        >
-          Cancel
-        </button>
-      </div>
-      {error && <p className="text-red-400 text-[11px]">{error}</p>}
-    </form>
-  );
-}
-
+// The AdminLock control below (see app/AdminLock.js) is deliberately kept
+// in the sidebar footer even though a compact copy now also lives on the
+// Home dashboard (2026-07-29) — this one stays reachable even when the nav
+// is locked mid-round (see ScorecardLockContext), which is the escape hatch
+// for handing the phone to an admin. Don't remove this usage.
 export default function Sidebar({ open = false, onClose = () => {} }) {
   const pathname = usePathname();
   const { locked } = useScorecardLock();
