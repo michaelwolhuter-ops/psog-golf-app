@@ -85,7 +85,7 @@ export default function ScorecardEntryPage() {
 
   const { confirm, ConfirmDialog } = useConfirm();
   const { isAdmin } = useAdmin();
-  const { lockedScorecardId, setLockedScorecardId } = useScorecardLock();
+  const { setLockedScorecardId } = useScorecardLock();
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -390,19 +390,30 @@ export default function ScorecardEntryPage() {
       setError(body.error || `Couldn't delete the scorecard (${res.status})`);
       return;
     }
-    // Explicit clear, not a reliance on unmount — abandoning is a genuine
-    // "this round is over" event, same reasoning as finishRound below.
-    if (lockedScorecardId === id) setLockedScorecardId(null);
+    // Explicit clear — unconditional, not gated on lockedScorecardId === id.
+    // Abandoning is a genuine "this device is done with active-round mode"
+    // event: whatever the current lock happens to be pointing at, leaving
+    // this page for the event page means it should not still be forced back
+    // into any scorecard. An equality check here used to be able to leave a
+    // stale lock in place (pointing at some other scorecard from earlier in
+    // a testing session) that then yanked the device sideways into THAT
+    // scorecard instead of reaching the event page — see finishRound below,
+    // same fix, same reasoning.
+    setLockedScorecardId(null);
     router.push(`/events/${scorecard.event_id}`);
   }
 
   async function finishRound() {
-    if (
-      !(await confirm(
-        "Finish this round? This writes the results into the event and can't be entered here again.",
-        { confirmLabel: 'Finish round' }
-      ))
-    ) {
+    // Explicit heads-up when not all 18 holes are in yet — "Finish Round"
+    // otherwise reads the same whether the card is full or half-empty, and
+    // it can't be undone from here (no re-entry once completed, without an
+    // admin using Reopen). Mike's ask, after finishing a round that turned
+    // out not to be empty but also not complete.
+    const incomplete = holesCompleted.size < 18;
+    const message = incomplete
+      ? `This round isn't complete — only ${holesCompleted.size} of 18 holes are entered. Finish anyway? This writes the results into the event and can't be entered here again.`
+      : "Finish this round? This writes the results into the event and can't be entered here again.";
+    if (!(await confirm(message, { confirmLabel: 'Finish round' }))) {
       return;
     }
     setFinishing(true);
@@ -414,12 +425,12 @@ export default function ScorecardEntryPage() {
       setError(body.error || `Couldn't finish the round (${res.status})`);
       return;
     }
-    // Explicit clear before navigating away — local `scorecard` state never
+    // Explicit clear before navigating away — unconditional, see
+    // deleteScorecard above for why. Local `scorecard` state also never
     // gets updated to 'completed' on this path (we push straight to the
-    // event page), so the lock effect above would never see the status
-    // change on its own and would otherwise leave this device locked to a
-    // round it just legitimately finished.
-    if (lockedScorecardId === id) setLockedScorecardId(null);
+    // event page), so the lock effect further up would never see the
+    // status change on its own either way.
+    setLockedScorecardId(null);
     router.push(`/events/${scorecard.event_id}`);
   }
 
