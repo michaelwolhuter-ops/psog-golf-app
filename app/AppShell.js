@@ -1,25 +1,57 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
 import { AdminProvider } from "@/lib/AdminContext";
-import { ScorecardLockProvider } from "@/lib/ScorecardLockContext";
+import { ScorecardLockProvider, useScorecardLock } from "@/lib/ScorecardLockContext";
 
 // Wraps Sidebar + page content and owns the open/closed state for the
 // mobile drawer. Desktop layout is untouched — the sidebar is always
 // visible there (md:translate-x-0 in Sidebar.js), this component only
 // adds the mobile top bar + overlay + slide-in behaviour below the md
 // breakpoint.
+//
+// Split into an outer/inner pair so the inner half can call
+// useScorecardLock() — that hook needs to run INSIDE ScorecardLockProvider,
+// which this same component renders, so the provider has to wrap it rather
+// than the other way round.
 export default function AppShell({ children }) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-  const isHome = pathname === "/";
-
   return (
     <AdminProvider>
-    <ScorecardLockProvider>
+      <ScorecardLockProvider>
+        <AppShellInner>{children}</AppShellInner>
+      </ScorecardLockProvider>
+    </AdminProvider>
+  );
+}
+
+function AppShellInner({ children }) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const isHome = pathname === "/";
+  const { lockedScorecardId, ready } = useScorecardLock();
+
+  // The actual enforcement of the player lock: no matter HOW a locked
+  // non-admin ends up somewhere else (sidebar logo, browser back-gesture,
+  // a bookmarked link, closing and reopening the tab), this fires on every
+  // route change and sends them straight back to their unfinished
+  // scorecard. This is what the old "just disable the sidebar links"
+  // approach was missing — those only stop clicks on links that are still
+  // on screen, not every other way of navigating. Waits for `ready` so it
+  // doesn't fire on the very first render before localStorage has been
+  // read (which would otherwise look like "not locked" for a frame).
+  useEffect(() => {
+    if (!ready || !lockedScorecardId) return;
+    const target = `/scorecards/${lockedScorecardId}`;
+    if (pathname !== target) {
+      router.replace(target);
+    }
+  }, [ready, lockedScorecardId, pathname, router]);
+
+  return (
     <div className="flex min-h-screen w-full">
       {/* Mobile-only top bar with hamburger — hidden entirely on desktop.
           Bumped from h-14/h-9 logo to h-20/h-14 so the logo actually reads
@@ -56,7 +88,5 @@ export default function AppShell({ children }) {
         {children}
       </main>
     </div>
-    </ScorecardLockProvider>
-    </AdminProvider>
   );
 }

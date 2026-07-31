@@ -43,7 +43,8 @@ const links = [
 // for handing the phone to an admin. Don't remove this usage.
 export default function Sidebar({ open = false, onClose = () => {} }) {
   const pathname = usePathname();
-  const { locked } = useScorecardLock();
+  const { lockedScorecardId } = useScorecardLock();
+  const locked = !!lockedScorecardId;
 
   return (
     <aside
@@ -69,16 +70,41 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
         >
           <X size={20} />
         </button>
-        <Link href="/" onClick={onClose} className="flex flex-col items-center text-center gap-2">
-          <img
-            src="/logo.png"
-            alt="POSG Tour"
-            className="h-24 w-auto drop-shadow-[0_0_16px_rgba(212,175,55,0.35)]"
-          />
-          <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
-            POSG <span className="text-gold">TOUR</span>
+        {/* Plain (non-navigating) while locked — this used to stay an
+            unconditional Link to "/", which was a real escape hatch: tapping
+            it navigated away from an in-progress scorecard just like any
+            other link, unmounting that page and (under the old
+            unmount-clears-the-lock design) silently freeing the device to
+            wander off. AppShell's redirect guard would now bounce a click
+            here straight back anyway, but rendering it as inert instead
+            avoids a jarring flash-navigate-then-snap-back. */}
+        {locked ? (
+          <div
+            aria-disabled="true"
+            title="Finish this round to navigate elsewhere"
+            className="flex flex-col items-center text-center gap-2 cursor-not-allowed"
+          >
+            <img
+              src="/logo.png"
+              alt="POSG Tour"
+              className="h-24 w-auto opacity-60"
+            />
+            <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
+              POSG <span className="text-gold">TOUR</span>
+            </div>
           </div>
-        </Link>
+        ) : (
+          <Link href="/" onClick={onClose} className="flex flex-col items-center text-center gap-2">
+            <img
+              src="/logo.png"
+              alt="POSG Tour"
+              className="h-24 w-auto drop-shadow-[0_0_16px_rgba(212,175,55,0.35)]"
+            />
+            <div className="text-base font-bold tracking-wide text-posgtext leading-tight">
+              POSG <span className="text-gold">TOUR</span>
+            </div>
+          </Link>
+        )}
       </div>
 
       {locked && (

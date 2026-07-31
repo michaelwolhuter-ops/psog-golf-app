@@ -18,7 +18,10 @@ import {
   ArrowUpRight,
   Crosshair,
   Repeat2,
+  Eye,
+  X,
 } from 'lucide-react';
+import { ScorecardTable } from '@/app/ScorecardTable';
 import {
   strokesReceived,
   resolveHoleScore,
@@ -69,9 +72,20 @@ export default function ScorecardEntryPage() {
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Read-only "View Card" — lets a locked non-admin (or anyone) glance at
+  // their own full scorecard and other groups' cards mid-round without
+  // navigating anywhere: it's a modal over this same page, not a route
+  // change, so it has no interaction with the nav lock at all. Own card is
+  // built straight from state already loaded for entry; other groups are
+  // fetched fresh each time the modal opens (a manual "check now" peek, not
+  // continuously polled — simplest thing that works for an occasional look).
+  const [cardViewOpen, setCardViewOpen] = useState(false);
+  const [otherCards, setOtherCards] = useState(null);
+  const [loadingOtherCards, setLoadingOtherCards] = useState(false);
+
   const { confirm, ConfirmDialog } = useConfirm();
   const { isAdmin } = useAdmin();
-  const { setLocked } = useScorecardLock();
+  const { lockedScorecardId, setLockedScorecardId } = useScorecardLock();
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -142,16 +156,46 @@ export default function ScorecardEntryPage() {
     return () => clearInterval(interval);
   }, [scorecard?.event_id]);
 
+  // Fetches every OTHER scorecard for this event (own is already loaded
+  // locally, built directly from state in the modal below) with its full
+  // hole-by-hole detail, for the "View Card" modal's "Other Groups" section.
+  async function loadOtherCards() {
+    if (!scorecard?.event_id) return;
+    setLoadingOtherCards(true);
+    const listBody = await fetch(`/api/events/${scorecard.event_id}/scorecards`, {
+      cache: 'no-store',
+    }).then((r) => r.json());
+    const others = (listBody.data || []).filter((sc) => sc.id !== id);
+    const details = await Promise.all(
+      others.map((sc) =>
+        fetch(`/api/scorecards/${sc.id}`, { cache: 'no-store' }).then((r) => r.json())
+      )
+    );
+    setOtherCards(
+      others
+        .map((sc, i) => ({ summary: sc, detail: details[i] }))
+        .filter((x) => !x.detail.error)
+    );
+    setLoadingOtherCards(false);
+  }
+
   // The actual nav lock: while a non-admin has this round open and it's
-  // still in progress, Sidebar disables its other links (see Sidebar.js) so
-  // they can't wander off to Dashboard/Events and open a different group's
-  // scorecard. Clears itself the moment the round finishes, an admin logs
-  // in, or this page is left (cleanup fires on unmount either way).
+  // still in progress, Sidebar disables its other links AND AppShell
+  // redirects back here on any other route (see Sidebar.js / AppShell.js)
+  // so they can't wander off to Dashboard/Events and open a different
+  // group's scorecard. Deliberately does NOT clear on unmount — the whole
+  // point is that leaving this page (however that happens) must not be
+  // what clears the lock, or it's not a lock. It only clears when this
+  // effect itself decides the round is genuinely over: the round finishes
+  // (see finishRound below, which clears it explicitly before navigating
+  // away — by the time this component would re-run this effect it's
+  // already gone), an admin unlocks (isAdmin flips true while still stuck
+  // here), or someone abandons the round (see deleteScorecard, same
+  // explicit-clear pattern).
   useEffect(() => {
     if (!scorecard) return;
-    setLocked(!isAdmin && scorecard.status === 'in_progress');
-    return () => setLocked(false);
-  }, [isAdmin, scorecard?.status, setLocked]);
+    setLockedScorecardId(!isAdmin && scorecard.status === 'in_progress' ? id : null);
+  }, [isAdmin, scorecard?.status, id, setLockedScorecardId]);
 
   const hole = useMemo(
     () => course?.holes?.find((h) => h.hole_number === currentHole),
@@ -346,6 +390,9 @@ export default function ScorecardEntryPage() {
       setError(body.error || `Couldn't delete the scorecard (${res.status})`);
       return;
     }
+    // Explicit clear, not a reliance on unmount — abandoning is a genuine
+    // "this round is over" event, same reasoning as finishRound below.
+    if (lockedScorecardId === id) setLockedScorecardId(null);
     router.push(`/events/${scorecard.event_id}`);
   }
 
@@ -367,6 +414,12 @@ export default function ScorecardEntryPage() {
       setError(body.error || `Couldn't finish the round (${res.status})`);
       return;
     }
+    // Explicit clear before navigating away — local `scorecard` state never
+    // gets updated to 'completed' on this path (we push straight to the
+    // event page), so the lock effect above would never see the status
+    // change on its own and would otherwise leave this device locked to a
+    // round it just legitimately finished.
+    if (lockedScorecardId === id) setLockedScorecardId(null);
     router.push(`/events/${scorecard.event_id}`);
   }
 
@@ -391,11 +444,13 @@ export default function ScorecardEntryPage() {
   // Players only get "Back to event" once this round is actually finished
   // (or if they're admin) — otherwise the live leaderboard already shown
   // right here covers everything they'd need the event page for. The
-  // sidebar's other links are also disabled while this is open (see the
-  // setLocked effect above + Sidebar.js), so this isn't just a nudge —
-  // finishing the round is the only way out for a non-admin. Still not a
-  // real per-player lock though: nothing stops a different phone from
-  // opening a fresh event page and tapping into someone else's scorecard
+  // sidebar's other links are also disabled while this is open, and
+  // AppShell redirects back here on any other route (see the
+  // setLockedScorecardId effect above, Sidebar.js, and AppShell.js), so
+  // this isn't just a nudge — finishing the round is the only way out for
+  // a non-admin. Still not a real per-player lock though: nothing stops a
+  // different phone from opening a fresh event page and tapping into
+  // someone else's scorecard
   // from scratch (no login exists to tie a device to a player).
   const canLeave = isAdmin || scorecard.status === 'completed';
 
@@ -423,6 +478,15 @@ export default function ScorecardEntryPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setCardViewOpen(true);
+              loadOtherCards();
+            }}
+            className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+          >
+            <Eye size={14} /> View Card
+          </button>
           {scorecard.status === 'completed' ? (
             isAdmin && (
               <button
@@ -781,6 +845,75 @@ export default function ScorecardEntryPage() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Read-only status view — a modal, not a route, so it works exactly
+          the same whether this device is locked or not, and never touches
+          the nav-lock guard in AppShell. Own card is built from state
+          already held for entry; other groups come from loadOtherCards(). */}
+      {cardViewOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-3 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setCardViewOpen(false);
+          }}
+        >
+          <div className="bg-posgcard border border-posgborder rounded-xl w-full max-w-3xl my-6">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-posgborder sticky top-0 bg-posgcard rounded-t-xl">
+              <h2 className="text-sm font-semibold text-posgtext flex items-center gap-2">
+                <Eye size={15} className="text-fairway" /> Scorecard Status
+              </h2>
+              <button
+                onClick={() => setCardViewOpen(false)}
+                className="text-posgmuted hover:text-posgtext p-1"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-6">
+              <div>
+                <p className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2">
+                  Your Card
+                </p>
+                <ScorecardTable
+                  detail={{ scorecard, course, players, hole_scores: holeScores }}
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2">
+                  Other Groups
+                </p>
+                {loadingOtherCards && !otherCards ? (
+                  <p className="text-posgmuted text-sm">Loading…</p>
+                ) : !otherCards || otherCards.length === 0 ? (
+                  <p className="text-posgmuted text-sm">No other scorecards for this event yet.</p>
+                ) : (
+                  otherCards.map(({ summary, detail }) => (
+                    <div key={summary.id} className="mb-5 last:mb-0">
+                      <p className="text-sm text-posgtext font-semibold mb-1.5 flex items-center gap-2">
+                        {summary.group_label || FORMAT_LABEL[summary.format]}
+                        <span
+                          className={
+                            'text-[10px] px-2 py-0.5 rounded-full ' +
+                            (summary.status === 'completed'
+                              ? 'bg-fairway/15 text-fairway'
+                              : 'bg-gold/15 text-gold')
+                          }
+                        >
+                          {summary.status === 'completed' ? 'Completed' : 'In progress'}
+                        </span>
+                      </p>
+                      <ScorecardTable detail={detail} />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
