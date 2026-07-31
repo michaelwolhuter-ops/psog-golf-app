@@ -234,19 +234,40 @@ export default function EventsPage() {
         <div className="space-y-3 mb-8">
           {events.map((e, i) => {
             const isNext = e.id === nextEventId;
+            // A round is actually being played right now — this is the
+            // state Mike wants jumping off the page, since it's the one
+            // thing on this list that needs a tap *today*, not "someday
+            // soon" (that's what NEXT UP already covers) or "already done."
+            const isLive = e.status === 'in_progress';
+            const isCompleted = e.status === 'completed';
+            // Bolder pass, 2026-07-31 — Mike wants the whole card themed by
+            // status, not just the small pill: red for live, gold for next
+            // up, green for completed, grey for everything else still
+            // upcoming. Same pattern as isLive/isNext already used (tinted
+            // gradient background, matching border colour, matching badge
+            // ring, matching accent bar) — just extended to the two states
+            // that were previously left plain. Event type (Qualifier/Tour
+            // Day) still shows via the badge letter and the text line below
+            // the name, it just no longer drives card colour.
+            const accentBar = isCompleted ? 'bg-fairway' : 'bg-slate-400';
             return (
-              <div
-                key={e.id}
-                onClick={() => router.push(`/events/${e.id}`)}
-                className={`group relative flex items-center gap-3 sm:gap-4 rounded-2xl border p-4 sm:p-5 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/20 ${
-                  isNext
-                    ? 'border-gold/40 bg-gradient-to-r from-gold/10 via-posgcard to-posgcard hover:border-gold/70'
-                    : 'bg-posgcard border-posgborder hover:border-fairway/50 hover:bg-fairway/5'
-                }`}
-              >
-                {isNext && (
+              <div key={e.id} className="group relative">
+                {isLive && (
                   <span
-                    className={`absolute -top-2 text-[10px] font-extrabold tracking-wide bg-gold text-black px-2 py-0.5 rounded-full ${
+                    className={`absolute -top-2.5 z-10 inline-flex items-center gap-1 text-[10px] font-extrabold tracking-wide bg-red-500 text-white px-2 py-0.5 rounded-full ${
+                      reorderOpen ? 'left-4 sm:left-16' : 'left-4 sm:left-5'
+                    }`}
+                  >
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                    </span>
+                    LIVE NOW
+                  </span>
+                )}
+                {isNext && !isLive && (
+                  <span
+                    className={`absolute -top-2 z-10 text-[10px] font-extrabold tracking-wide bg-gold text-black px-2 py-0.5 rounded-full ${
                       reorderOpen ? 'left-4 sm:left-16' : 'left-4 sm:left-5'
                     }`}
                   >
@@ -254,79 +275,114 @@ export default function EventsPage() {
                   </span>
                 )}
 
-                {isAdmin && reorderOpen && (
-                  <div
-                    className="flex flex-col -my-1 shrink-0"
-                    onClick={(evt) => evt.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => moveEvent(i, -1)}
-                      disabled={i === 0}
-                      className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                      title="Move up"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => moveEvent(i, 1)}
-                      disabled={i === events.length - 1}
-                      className="text-posgmuted hover:text-posgtext disabled:opacity-20"
-                      title="Move down"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
-                )}
-
                 <div
-                  className={`w-11 h-11 sm:w-12 sm:h-12 shrink-0 rounded-full border-2 flex items-center justify-center font-extrabold text-sm ${badgeStyle(
-                    e.event_type
-                  )}`}
+                  onClick={() => router.push(`/events/${e.id}`)}
+                  className={`relative overflow-hidden flex items-center gap-3 sm:gap-4 rounded-2xl border-2 p-4 sm:p-5 pl-5 sm:pl-6 cursor-pointer transition-all shadow-md hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/30 ${
+                    isLive
+                      ? 'border-red-500/60 bg-gradient-to-r from-red-500/15 via-posgcard to-posgcard shadow-red-500/10 hover:border-red-500/80'
+                      : isNext
+                      ? 'border-gold/50 bg-gradient-to-r from-gold/10 via-posgcard to-posgcard hover:border-gold/70'
+                      : isCompleted
+                      ? 'border-fairway/45 bg-gradient-to-r from-fairway/10 via-posgcard to-posgcard hover:border-fairway/65'
+                      : 'border-slate-400/35 bg-gradient-to-r from-slate-500/10 via-posgcard to-posgcard hover:border-slate-400/55'
+                  }`}
                 >
-                  {badgeLabel(e.name)}
-                </div>
+                  {!isLive && !isNext && (
+                    <span className={`absolute inset-y-0 left-0 w-1.5 ${accentBar}`} />
+                  )}
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-posgtext font-bold text-lg group-hover:text-fairway transition">
-                      {e.name}
-                    </span>
-                    {e.status === 'completed' ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-fairway">
-                        <CheckCircle2 size={13} /> Completed
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-posgmuted">
-                        <Clock size={13} /> Upcoming
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-posgmuted mt-0.5">
-                    {typeLabel[e.event_type] || e.event_type} · {e.golf_course || 'Course TBC'} ·{' '}
-                    {e.event_date || 'Date TBC'}
-                  </div>
-                  {e.status === 'completed' &&
-                    (e.individual_winner ||
-                      (e.team_winner_names && e.team_winner_names.length > 0)) && (
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-2 text-xs">
-                        {e.individual_winner && (
-                          <span className="inline-flex items-center gap-1 text-gold font-semibold">
-                            <Trophy size={13} /> {e.individual_winner}
-                          </span>
-                        )}
-                        {e.team_winner_names && e.team_winner_names.length > 0 && (
-                          <span className="inline-flex items-center gap-1 text-posgmuted">
-                            <Users size={13} /> {e.team_winner_names.join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                </div>
+                  {isAdmin && reorderOpen && (
+                    <div
+                      className="flex flex-col -my-1 shrink-0"
+                      onClick={(evt) => evt.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => moveEvent(i, -1)}
+                        disabled={i === 0}
+                        className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                        title="Move up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        onClick={() => moveEvent(i, 1)}
+                        disabled={i === events.length - 1}
+                        className="text-posgmuted hover:text-posgtext disabled:opacity-20"
+                        title="Move down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+                  )}
 
-                <ChevronRight
-                  size={20}
-                  className="text-posgmuted group-hover:text-fairway group-hover:translate-x-1 transition-transform shrink-0"
-                />
+                  <div
+                    className={`w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-full border-2 flex items-center justify-center font-extrabold text-base ${
+                      isLive
+                        ? 'border-red-500 bg-red-500/15 text-red-400'
+                        : isCompleted
+                        ? 'border-fairway bg-fairway/15 text-fairway'
+                        : 'border-slate-400 bg-slate-500/15 text-slate-300'
+                    }`}
+                  >
+                    {badgeLabel(e.name)}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`font-extrabold transition ${
+                          isLive
+                            ? 'text-posgtext text-xl sm:text-2xl group-hover:text-red-400'
+                            : 'text-posgtext text-xl group-hover:text-fairway'
+                        }`}
+                      >
+                        {e.name}
+                      </span>
+                      {e.status === 'completed' ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-extrabold tracking-wide text-black bg-fairway px-3 py-1 rounded-full">
+                          <CheckCircle2 size={15} /> COMPLETED
+                        </span>
+                      ) : isLive ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-red-400 bg-red-500/15 tracking-wide px-2 py-0.5 rounded-full">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                          </span>
+                          IN PROGRESS
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-extrabold tracking-wide text-slate-200 bg-slate-500/40 border border-slate-400/40 px-3 py-1 rounded-full">
+                          <Clock size={15} /> UPCOMING
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-posgmuted mt-1 font-medium">
+                      {typeLabel[e.event_type] || e.event_type} · {e.golf_course || 'Course TBC'} ·{' '}
+                      {e.event_date || 'Date TBC'}
+                    </div>
+                    {e.status === 'completed' &&
+                      (e.individual_winner ||
+                        (e.team_winner_names && e.team_winner_names.length > 0)) && (
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 mt-2 text-xs">
+                          {e.individual_winner && (
+                            <span className="inline-flex items-center gap-1 text-gold font-semibold">
+                              <Trophy size={13} /> {e.individual_winner}
+                            </span>
+                          )}
+                          {e.team_winner_names && e.team_winner_names.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-posgmuted">
+                              <Users size={13} /> {e.team_winner_names.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                  </div>
+
+                  <ChevronRight
+                    size={22}
+                    className="text-posgmuted group-hover:text-fairway group-hover:translate-x-1 transition-transform shrink-0"
+                  />
+                </div>
               </div>
             );
           })}

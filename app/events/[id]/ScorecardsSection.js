@@ -13,6 +13,7 @@ const FORMAT_LABEL = {
 };
 
 function ScorecardCard({ summary }) {
+  const { isAdmin } = useAdmin();
   const [detail, setDetail] = useState(null);
 
   useEffect(() => {
@@ -46,9 +47,17 @@ function ScorecardCard({ summary }) {
           </p>
           <p className="text-xs text-posgmuted mt-0.5">{memberNames}</p>
         </div>
-        {/* A real, bigger tap target — this is the button markers hit
-            constantly mid-round, standing on a golf course, often one-
-            handed. A small text link was too easy to miss/mis-tap. */}
+        {/* Admin-only: opening/resuming/reopening a scorecard for editing.
+            Mike's rule (2026-07-31) — only admins should be able to open,
+            close, resume, or otherwise touch a scorecard's entry screen.
+            A non-admin who isn't the one actually entering scores for this
+            group was able to tap in here and start editing someone else's
+            round. Non-admins now just see the read-only card below, no
+            button at all. This doesn't stop someone with a direct link to
+            the scorecard URL from opening it (there's no real login to tie
+            a device to a specific player) — that gap is accepted for now,
+            see ScorecardTable.js's ownership note. */}
+        {isAdmin && (
         <Link
           href={`/scorecards/${summary.id}`}
           className={
@@ -60,6 +69,7 @@ function ScorecardCard({ summary }) {
         >
           {summary.status === 'completed' ? 'Reopen / Delete' : 'Resume Entry'} <ChevronRight size={14} />
         </Link>
+        )}
       </div>
 
       {!detail ? (

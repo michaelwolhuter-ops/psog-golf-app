@@ -400,7 +400,7 @@ export default function ScorecardEntryPage() {
     // scorecard instead of reaching the event page — see finishRound below,
     // same fix, same reasoning.
     setLockedScorecardId(null);
-    router.push(`/events/${scorecard.event_id}`);
+    router.replace(`/events/${scorecard.event_id}`);
   }
 
   async function finishRound() {
@@ -425,13 +425,19 @@ export default function ScorecardEntryPage() {
       setError(body.error || `Couldn't finish the round (${res.status})`);
       return;
     }
-    // Explicit clear before navigating away — unconditional, see
-    // deleteScorecard above for why. Local `scorecard` state also never
-    // gets updated to 'completed' on this path (we push straight to the
-    // event page), so the lock effect further up would never see the
-    // status change on its own either way.
+    // Reflect "completed" locally right away, as a safety net — previously
+    // this only relied on router.push actually landing on the event page;
+    // if that navigation is ever slow, blocked, or doesn't fire (reported:
+    // it can land back on this same scorecard page instead of the event
+    // page), the page would otherwise still look mid-round (entry buttons
+    // still showing, no "finished" banner) even though the round genuinely
+    // did complete server-side. Updating this first means that even in that
+    // failure case, this page immediately shows the completed banner and a
+    // working "Back to event" link instead of looking stuck.
+    setScorecard((s) => ({ ...s, status: 'completed' }));
+    // Explicit clear — unconditional, see deleteScorecard above for why.
     setLockedScorecardId(null);
-    router.push(`/events/${scorecard.event_id}`);
+    router.replace(`/events/${scorecard.event_id}`);
   }
 
   let liveMatch = null;
