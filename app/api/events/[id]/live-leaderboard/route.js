@@ -46,7 +46,7 @@ export async function GET(request, { params }) {
     scorecardIds.length
       ? supabase
           .from("hole_scores")
-          .select("scorecard_id, player_id, hole_number, stableford_points")
+          .select("scorecard_id, player_id, hole_number, stableford_points, gross_score, three_putt")
           .in("scorecard_id", scorecardIds)
       : Promise.resolve({ data: [] }),
     supabase
@@ -68,8 +68,19 @@ export async function GET(request, { params }) {
     if (sp.players?.name) nameByPlayer[sp.player_id] = sp.players.name;
     scorecardIdByPlayer[sp.player_id] = sp.scorecard_id;
   });
+  // Day-of award stats (Most 3-Putts, Hundreds Club) — summed the same way
+  // as points, straight off hole_scores, so they update live alongside
+  // everything else. The event page itself decides which players are
+  // "finished" enough to actually appear in an award (see thruFor below),
+  // this just gives it the raw per-player totals to filter.
+  const threePuttsByPlayer = {};
+  const grossTotalByPlayer = {};
   (holeScores || []).forEach((hs) => {
     pointsByPlayer[hs.player_id] = (pointsByPlayer[hs.player_id] || 0) + hs.stableford_points;
+    grossTotalByPlayer[hs.player_id] = (grossTotalByPlayer[hs.player_id] || 0) + (hs.gross_score || 0);
+    if (hs.three_putt) {
+      threePuttsByPlayer[hs.player_id] = (threePuttsByPlayer[hs.player_id] || 0) + 1;
+    }
   });
 
   // "Thru" (holes played so far) — one scorecard's holes are always entered
@@ -125,6 +136,8 @@ export async function GET(request, { params }) {
         longest_drive: !!bonus.longest_drive,
         closest_to_pin: !!bonus.closest_to_pin,
         countback_win: !!bonus.countback_win,
+        three_putts: threePuttsByPlayer[playerId] || 0,
+        gross_total: grossTotalByPlayer[playerId] || 0,
       };
     })
     .sort((a, b) => {

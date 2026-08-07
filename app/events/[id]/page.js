@@ -18,6 +18,9 @@ import {
   ClipboardList,
   Swords,
   Users2,
+  Repeat2,
+  Frown,
+  AlertTriangle,
 } from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
@@ -236,6 +239,34 @@ export default function EventDetailPage() {
   if (!event) return <p className="text-posgmuted">Loading…</p>;
 
   const enteredCount = Object.values(form).filter((v) => v.points !== '' && v.points !== null).length;
+
+  // Day-of Awards — deliberately restricted to players whose round is fully
+  // finished (thru === 'F'), not just whatever's entered so far. A
+  // mid-round player can't fairly be "Last Place" (fewer holes played means
+  // fewer points, not necessarily worse golf) or excluded from the Hundreds
+  // Club just because they haven't gone over 100 yet at hole 12. Mike's
+  // call, 2026-08-07.
+  const finishedPlayers = liveBoard ? liveBoard.individual.filter((r) => r.thru === 'F') : [];
+
+  const maxThreePutts = finishedPlayers.length
+    ? Math.max(...finishedPlayers.map((r) => r.three_putts || 0))
+    : 0;
+  const threePuttLeaders = maxThreePutts > 0
+    ? finishedPlayers.filter((r) => (r.three_putts || 0) === maxThreePutts)
+    : [];
+
+  const lastPlacePoints = finishedPlayers.length > 1
+    ? Math.min(...finishedPlayers.map((r) => r.overall))
+    : null;
+  const lastPlacePlayers = lastPlacePoints !== null
+    ? finishedPlayers.filter((r) => r.overall === lastPlacePoints)
+    : [];
+
+  const hundredsClub = finishedPlayers
+    .filter((r) => (r.gross_total || 0) >= 100)
+    .sort((a, b) => b.gross_total - a.gross_total);
+
+  const hasAwards = threePuttLeaders.length > 0 || lastPlacePlayers.length > 0 || hundredsClub.length > 0;
 
   return (
     <div>
@@ -506,6 +537,66 @@ export default function EventDetailPage() {
               <span className="text-gold font-mono font-bold text-right">{t.points}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Awards — Most 3-Putts, Last Place, Hundreds Club. Finished-rounds-only
+          (see finishedPlayers above), so this section stays empty until at
+          least one scorecard is actually done, rather than showing
+          misleading mid-round "leaders". Placed after Team, before Matches,
+          per Mike's ask (2026-08-07). */}
+      {hasAwards && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Award size={13} className="text-gold" /> Awards
+          </h3>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {threePuttLeaders.length > 0 && (
+              <div className="bg-posgbg rounded-lg p-3">
+                <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <Repeat2 size={11} /> Most 3-Putts
+                </p>
+                {threePuttLeaders.map((r) => (
+                  <p key={r.player_id} className="text-sm text-posgtext font-semibold">
+                    {r.name}{' '}
+                    <span className="text-posgmuted font-mono font-normal">
+                      ({r.three_putts})
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+            {lastPlacePlayers.length > 0 && (
+              <div className="bg-posgbg rounded-lg p-3">
+                <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <Frown size={11} /> Last Place
+                </p>
+                {lastPlacePlayers.map((r) => (
+                  <p key={r.player_id} className="text-sm text-posgtext font-semibold">
+                    {r.name}{' '}
+                    <span className="text-posgmuted font-mono font-normal">
+                      ({r.overall} pts)
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+            {hundredsClub.length > 0 && (
+              <div className="bg-posgbg rounded-lg p-3">
+                <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <AlertTriangle size={11} /> Hundreds Club
+                </p>
+                {hundredsClub.map((r) => (
+                  <p key={r.player_id} className="text-sm text-posgtext font-semibold">
+                    {r.name}{' '}
+                    <span className="text-posgmuted font-mono font-normal">
+                      ({r.gross_total})
+                    </span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
