@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ClipboardList, Swords, ChevronRight } from 'lucide-react';
 import { useAdmin } from '@/lib/AdminContext';
+import { useScorecardLock } from '@/lib/ScorecardLockContext';
 import { ScorecardTable } from '@/app/ScorecardTable';
 
 const FORMAT_LABEL = {
@@ -14,7 +15,15 @@ const FORMAT_LABEL = {
 
 function ScorecardCard({ summary }) {
   const { isAdmin } = useAdmin();
+  const { myScorecardIds } = useScorecardLock();
   const [detail, setDetail] = useState(null);
+
+  // Own-round check for a non-admin: this device's own history of every
+  // scorecard it's ever been locked to (see ScorecardLockContext.js) —
+  // never "any in-progress round", which would just reopen the spectator
+  // hole the 2026-07-31 admin-only rule was written to close.
+  const isMine = myScorecardIds.includes(summary.id);
+  const canOpen = isAdmin || (summary.status !== 'completed' && isMine);
 
   useEffect(() => {
     fetch(`/api/scorecards/${summary.id}`, { cache: 'no-store' })
@@ -47,17 +56,22 @@ function ScorecardCard({ summary }) {
           </p>
           <p className="text-xs text-posgmuted mt-0.5">{memberNames}</p>
         </div>
-        {/* Admin-only: opening/resuming/reopening a scorecard for editing.
-            Mike's rule (2026-07-31) — only admins should be able to open,
-            close, resume, or otherwise touch a scorecard's entry screen.
-            A non-admin who isn't the one actually entering scores for this
-            group was able to tap in here and start editing someone else's
-            round. Non-admins now just see the read-only card below, no
-            button at all. This doesn't stop someone with a direct link to
-            the scorecard URL from opening it (there's no real login to tie
-            a device to a specific player) — that gap is accepted for now,
-            see ScorecardTable.js's ownership note. */}
-        {isAdmin && (
+        {/* Mike's rule (2026-07-31): a non-admin who isn't part of a group
+            shouldn't be able to tap in here and start editing someone
+            else's round. Originally this hid the button for every
+            non-admin, full stop — but that also blocked a player from
+            resuming their OWN in-progress round if their lock ever got
+            cleared (e.g. an admin had to rescue a stuck device). Fixed
+            2026-08-07: a non-admin can now resume (not reopen-when-
+            completed) a round if it's in this device's own history — see
+            isMine above. Reopening a COMPLETED round (editing an already-
+            finished result) stays admin-only regardless, since that's the
+            more consequential action. Still doesn't stop someone with a
+            direct link to the scorecard URL from opening a round that
+            isn't in their history (there's no real login to tie a device
+            to a specific player) — that gap is accepted for now, see
+            ScorecardTable.js's ownership note. */}
+        {canOpen && (
         <Link
           href={`/scorecards/${summary.id}`}
           className={

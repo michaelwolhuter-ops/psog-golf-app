@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useScorecardLock } from "@/lib/ScorecardLockContext";
+import { useAdmin } from "@/lib/AdminContext";
 import AdminLock from "@/app/AdminLock";
 
 const links = [
@@ -44,7 +45,15 @@ const links = [
 export default function Sidebar({ open = false, onClose = () => {} }) {
   const pathname = usePathname();
   const { lockedScorecardId } = useScorecardLock();
-  const locked = !!lockedScorecardId;
+  const { isAdmin } = useAdmin();
+  // Same bug as AppShell.js's redirect guard (fixed 2026-08-07): this used
+  // to ignore isAdmin entirely, so even a logged-in admin still saw every
+  // nav link disabled and "Finish this round to navigate elsewhere" —
+  // AppShell no longer force-redirects an admin, but the sidebar itself was
+  // still rendering the locked look regardless. Admin now always reads as
+  // unlocked here, whatever a stale lockedScorecardId in this device's
+  // storage says.
+  const locked = !!lockedScorecardId && !isAdmin;
 
   return (
     <aside

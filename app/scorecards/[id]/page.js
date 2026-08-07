@@ -100,6 +100,20 @@ export default function ScorecardEntryPage() {
       .then((body) => {
         if (body.error) {
           setError(body.error);
+          // A locked device pointing at a scorecard that no longer exists
+          // (deleted by an admin, or any other path) has nothing left to
+          // resume or finish — leaving the lock in place just traps the
+          // device on this "not found" screen forever, since the effect
+          // below that would normally clear it never runs without a real
+          // `scorecard` to read a status off. Bug found 2026-08-07: Mike's
+          // device had a stale lock from a scorecard deleted earlier in
+          // testing — invisible while logged in as admin (AppShell already
+          // bypasses admins), but the instant he logged out, AppShell's
+          // guard saw the stale id again and force-navigated here, and
+          // this page had no way to ever clear it. Safe to always clear on
+          // a load error — an admin viewing this by mistake had nothing
+          // locked to begin with, so this is a no-op for them.
+          setLockedScorecardId(null);
           return;
         }
         setScorecard(body.scorecard);
@@ -523,7 +537,17 @@ export default function ScorecardEntryPage() {
               <Trophy size={14} /> {finishing ? 'Finishing…' : 'Finish Round'}
             </button>
           )}
-          {(scorecard.status !== 'completed' || isAdmin) && (
+          {/* Admin-only, full stop, as of 2026-08-07 (Mike's explicit call
+              after repeated stuck-device bugs traced back to this button):
+              a non-admin used to be able to Abandon (= permanently delete)
+              their own in-progress round, which is exactly what kept
+              leaving devices locked to a scorecard that no longer existed.
+              The only way a non-admin can now exit an in-progress round is
+              Finish Round below — and once finished, only an admin can
+              reopen or delete it. This isn't a UI tweak, it removes the
+              non-admin delete path entirely so that class of bug can't
+              happen again. */}
+          {isAdmin && (
           <button
             onClick={deleteScorecard}
             disabled={deleting}

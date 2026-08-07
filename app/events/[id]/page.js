@@ -21,6 +21,7 @@ import {
   Repeat2,
   Frown,
   AlertTriangle,
+  Shirt,
 } from 'lucide-react';
 
 const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
@@ -99,6 +100,7 @@ export default function EventDetailPage() {
             longest_drive: r ? r.longest_drive : false,
             closest_to_pin: r ? r.closest_to_pin : false,
             countback_win: r ? r.countback_win : false,
+            tutu: r ? r.tutu : false,
           };
         });
         setForm(f);
@@ -194,6 +196,64 @@ export default function EventDetailPage() {
     setSavedAt(new Date());
   }
 
+  // The Tutu ("last player to not get passed by the ladies") is a single
+  // manual pick per event, Mike's call — not derived from scores at all, so
+  // unlike Longest Drive/CTP/Countback (independent per-player flags), this
+  // one enforces "at most one player at a time" itself: picking a new
+  // player also clears whoever held it before, in the same request. Ticking
+  // the current holder again clears it back to nobody, since "if any" means
+  // zero is a valid state too.
+  async function saveTutu(playerId) {
+    const v = form[playerId] || {};
+    if (v.points === '' || v.points === null || v.points === undefined) {
+      // No result yet for this player — nothing to attach the award to.
+      return;
+    }
+    const newValue = !v.tutu;
+    const previousHolderId = Object.keys(form).find(
+      (pid) => pid !== playerId && form[pid]?.tutu
+    );
+
+    const results = [
+      {
+        player_id: playerId,
+        points: v.points,
+        longest_drive: v.longest_drive,
+        closest_to_pin: v.closest_to_pin,
+        countback_win: v.countback_win,
+        tutu: newValue,
+      },
+    ];
+    if (previousHolderId) {
+      const prevV = form[previousHolderId] || {};
+      results.push({
+        player_id: previousHolderId,
+        points: prevV.points,
+        longest_drive: prevV.longest_drive,
+        closest_to_pin: prevV.closest_to_pin,
+        countback_win: prevV.countback_win,
+        tutu: false,
+      });
+    }
+
+    setField(playerId, 'tutu', newValue);
+    if (previousHolderId) setField(previousHolderId, 'tutu', false);
+
+    setResultsError('');
+    const res = await fetch(`/api/events/${id}/results`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ results }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setResultsError(body.error || `Save failed (${res.status}) — reverted.`);
+      load(); // pull back the real saved state rather than leave a lie on screen
+      return;
+    }
+    setSavedAt(new Date());
+  }
+
   async function saveMeta(e) {
     e.preventDefault();
     setSavingMeta(true);
@@ -266,7 +326,29 @@ export default function EventDetailPage() {
     .filter((r) => (r.gross_total || 0) >= 100)
     .sort((a, b) => b.gross_total - a.gross_total);
 
-  const hasAwards = threePuttLeaders.length > 0 || lastPlacePlayers.length > 0 || hundredsClub.length > 0;
+  // Gross Leaderboard — stroke play ranking (lowest total gross wins),
+  // deliberately NOT part of the live-updating board above: only ever
+  // rendered once event.status === 'completed' (every scorecard for this
+  // event is done — see lib/eventStatus.js), so by the time it's visible
+  // at all, the numbers behind it are already final. Mike's ask
+  // (2026-08-07): not a running "gross so far" table, a final result only.
+  // gross_total > 0 filters out players whose result was entered manually
+  // with no scorecard at all — they have no real hole-by-hole gross to
+  // rank (see live-leaderboard route's grossTotalByPlayer, which only ever
+  // sums actual hole_scores rows).
+  const grossBoard = liveBoard
+    ? liveBoard.individual
+        .filter((r) => (r.gross_total || 0) > 0)
+        .sort((a, b) => a.gross_total - b.gross_total)
+    : [];
+
+  // The Tutu is a manual pick, not a computed stat, so it deliberately
+  // isn't filtered to finishedPlayers like the three above — Mike can name
+  // it as soon as it happens, mid-round, same as Longest Drive/CTP.
+  const tutuPlayer = liveBoard ? liveBoard.individual.find((r) => r.tutu) || null : null;
+
+  const hasAwards =
+    threePuttLeaders.length > 0 || lastPlacePlayers.length > 0 || hundredsClub.length > 0 || !!tutuPlayer;
 
   return (
     <div>
@@ -540,6 +622,41 @@ export default function EventDetailPage() {
         </div>
       )}
 
+      {/* Gross Leaderboard — see grossBoard above. Not live: gated on the
+          whole event being completed, not shown or updated while any round
+          is still in progress. */}
+      {event.status === 'completed' && grossBoard.length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Flag size={13} className="text-gold" /> Gross Leaderboard
+          </h3>
+          <div>
+            <div className="grid grid-cols-[2rem_1fr_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
+              <span>Pos</span>
+              <span>Player</span>
+              <span className="text-right">Gross</span>
+            </div>
+            {grossBoard.map((r, i) => (
+              <div
+                key={r.player_id}
+                className="grid grid-cols-[2rem_1fr_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
+              >
+                <span
+                  className={
+                    'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
+                    (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                  }
+                >
+                  {i === 0 ? <Trophy size={12} /> : i + 1}
+                </span>
+                <span className="text-posgtext text-sm font-semibold truncate">{r.name}</span>
+                <span className="text-gold font-mono font-bold text-right">{r.gross_total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Awards — Most 3-Putts, Last Place, Hundreds Club. Finished-rounds-only
           (see finishedPlayers above), so this section stays empty until at
           least one scorecard is actually done, rather than showing
@@ -550,7 +667,7 @@ export default function EventDetailPage() {
           <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
             <Award size={13} className="text-gold" /> Awards
           </h3>
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {threePuttLeaders.length > 0 && (
               <div className="bg-posgbg rounded-lg p-3">
                 <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-1.5 flex items-center gap-1">
@@ -596,6 +713,14 @@ export default function EventDetailPage() {
                 ))}
               </div>
             )}
+            {tutuPlayer && (
+              <div className="bg-posgbg rounded-lg p-3">
+                <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                  <Shirt size={11} /> The Tutu
+                </p>
+                <p className="text-sm text-posgtext font-semibold">{tutuPlayer.name}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -635,7 +760,7 @@ export default function EventDetailPage() {
       <>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback
+          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback / The Tutu
         </h2>
         <button
           onClick={() => setBonusOpen((v) => !v)}
@@ -658,6 +783,7 @@ export default function EventDetailPage() {
                 <th className="px-4 py-3 text-center w-32">Longest Drive</th>
                 <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
                 <th className="px-4 py-3 text-center w-24">Countback</th>
+                <th className="px-4 py-3 text-center w-24">The Tutu</th>
               </tr>
             </thead>
             <tbody>
@@ -697,6 +823,16 @@ export default function EventDetailPage() {
                         onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
                         className="accent-gold w-4 h-4 disabled:opacity-30"
                         title="Tick if the committee decided this player wins a tie on points"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={!hasResult}
+                        checked={!!form[p.id]?.tutu}
+                        onChange={() => saveTutu(p.id)}
+                        className="accent-fairway w-4 h-4 disabled:opacity-30"
+                        title="Last player to not get passed by the ladies — only one player can hold this at a time, ticking a new one clears the last"
                       />
                     </td>
                   </tr>

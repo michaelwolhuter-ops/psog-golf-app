@@ -24,6 +24,7 @@ export async function POST(request, { params }) {
         longest_drive: !!r.longest_drive,
         closest_to_pin: !!r.closest_to_pin,
         countback_win: !!r.countback_win,
+        tutu: !!r.tutu,
         // A human is setting this result by hand right now — it's no longer
         // "owned" by whichever scorecard (if any) originally produced it, so
         // reopening/deleting that scorecard later must never touch this row.

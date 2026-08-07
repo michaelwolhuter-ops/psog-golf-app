@@ -49,7 +49,7 @@ export async function POST(request, { params }) {
   const playerIds = (scorecardPlayers || []).map((sp) => sp.player_id);
   const { data: existingResults } = await supabase
     .from("event_results")
-    .select("player_id, longest_drive, closest_to_pin, countback_win")
+    .select("player_id, longest_drive, closest_to_pin, countback_win, tutu")
     .eq("event_id", eventId)
     .in("player_id", playerIds.length ? playerIds : ["00000000-0000-0000-0000-000000000000"]);
   const existingByPlayer = Object.fromEntries((existingResults || []).map((r) => [r.player_id, r]));
@@ -66,6 +66,7 @@ export async function POST(request, { params }) {
       longest_drive: existing?.longest_drive || false,
       closest_to_pin: existing?.closest_to_pin || false,
       countback_win: existing?.countback_win || false,
+      tutu: existing?.tutu || false,
       // Tags this result as scorecard-sourced so reopening/deleting this
       // scorecard later can cleanly undo exactly what it wrote, and so the
       // event page knows which players' results came from a real scorecard.

@@ -51,7 +51,7 @@ export async function GET(request, { params }) {
       : Promise.resolve({ data: [] }),
     supabase
       .from("event_results")
-      .select("player_id, points, longest_drive, closest_to_pin, countback_win, scorecard_id, players(id, name)")
+      .select("player_id, points, longest_drive, closest_to_pin, countback_win, tutu, scorecard_id, players(id, name)")
       .eq("event_id", eventId),
   ]);
 
@@ -110,6 +110,7 @@ export async function GET(request, { params }) {
       longest_drive: !!r.longest_drive,
       closest_to_pin: !!r.closest_to_pin,
       countback_win: !!r.countback_win,
+      tutu: !!r.tutu,
     };
     if (r.players?.name) nameByPlayer[r.player_id] = r.players.name;
     // No scorecard at all for this player — their only number is whatever
@@ -136,6 +137,7 @@ export async function GET(request, { params }) {
         longest_drive: !!bonus.longest_drive,
         closest_to_pin: !!bonus.closest_to_pin,
         countback_win: !!bonus.countback_win,
+        tutu: !!bonus.tutu,
         three_putts: threePuttsByPlayer[playerId] || 0,
         gross_total: grossTotalByPlayer[playerId] || 0,
       };
