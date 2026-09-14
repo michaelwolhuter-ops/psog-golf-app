@@ -172,22 +172,102 @@ export async function GET(request, { params }) {
           holesByNumber[hs.hole_number] = holesByNumber[hs.hole_number] || [];
           holesByNumber[hs.hole_number].push(hs.stableford_points);
         });
-      const points = Object.values(holesByNumber).reduce(
+      const rawPoints = Object.values(holesByNumber).reduce(
         (sum, pts) => sum + pts.reduce((a, b) => betterBallHolePoints(a, b), 0),
         0
       );
+      // Countback tiers, kept purely for the tiebreak below — never shown
+      // as their own score, never get the LD/CTP bonus (that's a
+      // whole-round bonus, not a hole result). Each narrows the previous:
+      // back nine, then last 3, then last 2, then the 18th alone.
+      const pointsForHoles = (minHole) =>
+        Object.entries(holesByNumber)
+          .filter(([holeNum]) => Number(holeNum) >= minHole)
+          .reduce((sum, [, pts]) => sum + pts.reduce((a, b) => betterBallHolePoints(a, b), 0), 0);
+      const back9Points = pointsForHoles(10);
+      const last3Points = pointsForHoles(16);
+      const last2Points = pointsForHoles(17);
+      const last1Points = pointsForHoles(18);
+      // Final tiebreak: combined gross strokes for both players on the
+      // team across every hole played so far — lower wins (fewer strokes).
+      const teamGrossTotal = (holeScores || [])
+        .filter((hs) => hs.scorecard_id === sc.id && teamPlayerIds.includes(hs.player_id))
+        .reduce((sum, hs) => sum + (hs.gross_score || 0), 0);
+      // A teammate's LD/CTP bonus is a bonus for the whole team, not just
+      // the individual who hit it — same +2 each, added on top of the raw
+      // stableford total. Both players on the team read this off the same
+      // liveBoard.team row, so there's no way for their two scorecards to
+      // show different team totals.
+      const teamLd = teamPlayerIds.some((pid) => bonusByPlayer[pid]?.longest_drive);
+      const teamCtp = teamPlayerIds.some((pid) => bonusByPlayer[pid]?.closest_to_pin);
+      const points = rawPoints + (teamLd ? 2 : 0) + (teamCtp ? 2 : 0);
+      const bonusParts = [];
+      if (teamLd) bonusParts.push('+2 LD');
+      if (teamCtp) bonusParts.push('+2 CTP');
       team.push({
         scorecard_id: sc.id,
         team_number: teamNumber,
         names,
         points,
+        raw_points: rawPoints,
+        back9_points: back9Points,
+        last3_points: last3Points,
+        last2_points: last2Points,
+        last1_points: last1Points,
+        gross_total: teamGrossTotal,
+        longest_drive: teamLd,
+        closest_to_pin: teamCtp,
+        bonus_label: bonusParts.join(' '),
         thru: thruFor(sc.id),
         status: sc.status,
         group_label: sc.group_label,
       });
     }
   }
-  team.sort((a, b) => b.points - a.points);
+  // Countback tiebreak chain, in order: total points, back nine, last 3
+  // holes, last 2 holes, the 18th hole alone, then lowest combined gross
+  // (fewer strokes) as the final word. Each tier only matters once every
+  // tier before it is exactly equal — worked out automatically since it's
+  // all plain score comparison, not a judgment call like an individual's
+  // manual countback flag.
+  const TIEBREAK_TIERS = [
+    { key: 'points', label: null, dir: 'desc' },
+    { key: 'back9_points', label: 'the back nine', dir: 'desc' },
+    { key: 'last3_points', label: 'the last 3 holes', dir: 'desc' },
+    { key: 'last2_points', label: 'the last 2 holes', dir: 'desc' },
+    { key: 'last1_points', label: 'the 18th hole', dir: 'desc' },
+    { key: 'gross_total', label: 'gross score', dir: 'asc' },
+  ];
+  team.sort((a, b) => {
+    for (const tier of TIEBREAK_TIERS) {
+      const diff = tier.dir === 'desc' ? b[tier.key] - a[tier.key] : a[tier.key] - b[tier.key];
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+  // Finds which tier actually separated two teams that are tied on total
+  // points — returns its label, or null if every tier is exactly equal.
+  function decidingTier(a, b) {
+    if (a.points !== b.points) return null;
+    for (const tier of TIEBREAK_TIERS) {
+      if (tier.label && a[tier.key] !== b[tier.key]) return tier.label;
+    }
+    return null;
+  }
+  let teamPosition = 0;
+  team.forEach((t, i) => {
+    const prev = team[i - 1];
+    const stillTied = prev && !decidingTier(prev, t) && prev.points === t.points;
+    if (!stillTied) teamPosition = i + 1;
+    t.position = teamPosition;
+    // Flags the team that comes out ahead of another team it was level
+    // with on points, so the leaderboard can show where that ranking
+    // actually came from instead of just a number.
+    const next = team[i + 1];
+    const crit = next ? decidingTier(t, next) : null;
+    t.countback_win = !!crit;
+    t.countback_label = crit ? `Won on countback — ${crit}` : null;
+  });
 
   // --- Live matches (better ball match play — never fed a points table,
   // shown as running/final match status instead). ---

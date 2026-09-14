@@ -606,17 +606,27 @@ export default function EventDetailPage() {
               <span
                 className={
                   'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
-                  (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
+                  (t.position === 1 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
                 }
               >
-                {i === 0 ? <Trophy size={12} /> : i + 1}
+                {t.position === 1 ? <Trophy size={12} /> : t.position}
               </span>
               <span className="text-posgtext text-sm font-semibold truncate">
                 {t.names}
+                {t.countback_win && (
+                  <Award size={12} className="inline text-posgmuted ml-1" title={t.countback_label} />
+                )}
                 {t.group_label ? <span className="text-posgmuted font-normal"> — {t.group_label}</span> : ''}
               </span>
               <span className="text-posgmuted text-xs font-mono text-center">{t.thru ?? '–'}</span>
-              <span className="text-gold font-mono font-bold text-right">{t.points}</span>
+              <span className="text-right">
+                <span className="text-gold font-mono font-bold">{t.points}</span>
+                {t.bonus_label && (
+                  <span className="block text-fairway text-[10px] font-mono leading-tight">
+                    {t.bonus_label}
+                  </span>
+                )}
+              </span>
             </div>
           ))}
         </div>
