@@ -539,6 +539,30 @@ export default function EventDetailPage() {
         )}
       </div>
 
+      {/* Domination Leaderboard — the official team result for a Better
+          Ball Match Play event, shown directly (never behind a link or a
+          button, see the 2026-09-17 fixes) and, per Mike's original ask,
+          FIRST — ahead of Individual and Gross below, not after them. The
+          full broadcast dashboard (match cards + all three leaderboards
+          together) is still one click away at /events/[id]/matches for
+          anyone who wants it. */}
+      {liveBoard && liveBoard.matches.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
+              <Swords size={13} className="text-gold" /> Domination Leaderboard
+            </h3>
+            <Link
+              href={`/events/${id}/matches`}
+              className="text-[11px] text-posgmuted hover:text-posgtext"
+            >
+              Match cards & full results →
+            </Link>
+          </div>
+          <DominationBoard domination={liveBoard.domination || []} />
+        </div>
+      )}
+
       <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
         <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
           <Trophy size={13} className="text-gold" /> Individual
@@ -736,29 +760,6 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Domination Leaderboard shown directly here, not behind a link —
-          Mike reported (2026-09-17) that even after the tabs came out of
-          the dedicated /matches dashboard, this page still made him click
-          through a banner to see any team result at all. The full
-          broadcast dashboard (match cards + all three leaderboards) is
-          still one click away for anyone who wants it, but the team
-          result itself is never gated behind a click again. */}
-      {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
-              <Swords size={13} className="text-gold" /> Domination Leaderboard
-            </h3>
-            <Link
-              href={`/events/${id}/matches`}
-              className="text-[11px] text-posgmuted hover:text-posgtext"
-            >
-              Match cards & full results →
-            </Link>
-          </div>
-          <DominationBoard domination={liveBoard.domination || []} />
-        </div>
-      )}
 
       {/* The actual played scorecards for this event, hole by hole — shown
           below the standings now (was above until 2026-07-29). */}

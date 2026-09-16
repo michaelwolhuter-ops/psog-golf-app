@@ -145,12 +145,10 @@ export default function EventMatchesPage() {
         <p className="text-posgmuted text-sm">No match play scorecards for this event yet.</p>
       ) : (
         <div className="space-y-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {matches.map((m) => (
-              <MatchCard key={m.scorecard_id} match={m} />
-            ))}
-          </div>
-
+          {/* Order per Mike, 2026-09-17: Domination Leaderboard first, no
+              button, then Individual, then Gross. Match cards are extra
+              detail, not part of that ordering, so they sit below all
+              three rather than pushing the leaderboards down the page. */}
           <div>
             <h2 className="text-sm font-semibold text-posgtext flex items-center gap-1.5 mb-2">
               <Trophy size={14} className="text-gold" /> Domination Leaderboard
@@ -166,6 +164,15 @@ export default function EventMatchesPage() {
           <div>
             <h2 className="text-sm font-semibold text-posgtext mb-2">Gross Leaderboard</h2>
             <GrossBoard individual={individual} />
+          </div>
+
+          <div>
+            <h2 className="text-sm font-semibold text-posgtext mb-2">Match Cards</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {matches.map((m) => (
+                <MatchCard key={m.scorecard_id} match={m} />
+              ))}
+            </div>
           </div>
         </div>
       )}
