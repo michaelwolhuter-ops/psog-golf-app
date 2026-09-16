@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import ScorecardsSection from './ScorecardsSection';
+import { DominationBoard } from '@/app/DominationBoard';
 import { useConfirm } from '@/lib/useConfirm';
 import { useAdmin } from '@/lib/AdminContext';
 import {
@@ -735,23 +736,28 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {/* Better Ball Match Play has its own full broadcast-style dashboard
-          (Matches Live cards + Domination Leaderboard) — this is just an
-          entry point into it, not a duplicate of it. */}
+      {/* Domination Leaderboard shown directly here, not behind a link —
+          Mike reported (2026-09-17) that even after the tabs came out of
+          the dedicated /matches dashboard, this page still made him click
+          through a banner to see any team result at all. The full
+          broadcast dashboard (match cards + all three leaderboards) is
+          still one click away for anyone who wants it, but the team
+          result itself is never gated behind a click again. */}
       {liveBoard && liveBoard.matches.length > 0 && (
-        <Link
-          href={`/events/${id}/matches`}
-          className="flex items-center justify-between bg-posgcard rounded-xl border border-posgborder p-4 mb-8 hover:border-gold/40 transition"
-        >
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-posgtext">
-            <Swords size={15} className="text-gold" />
-            Matches Live
-            <span className="text-posgmuted font-normal">
-              — {liveBoard.matches.filter((m) => !m.finished).length} in progress
-            </span>
-          </span>
-          <span className="text-xs text-posgmuted">View all →</span>
-        </Link>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
+              <Swords size={13} className="text-gold" /> Domination Leaderboard
+            </h3>
+            <Link
+              href={`/events/${id}/matches`}
+              className="text-[11px] text-posgmuted hover:text-posgtext"
+            >
+              Match cards & full results →
+            </Link>
+          </div>
+          <DominationBoard domination={liveBoard.domination || []} />
+        </div>
       )}
 
       {/* The actual played scorecards for this event, hole by hole — shown
