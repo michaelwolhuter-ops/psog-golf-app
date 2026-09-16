@@ -957,7 +957,13 @@ export default function ScorecardEntryPage() {
               </Link>
             )}
           </div>
-          <div className="grid sm:grid-cols-2 gap-2">
+          {/* grid-cols-1 explicit, not just the bare `grid` class — Tailwind's
+              grid-cols-N utilities define tracks as minmax(0,1fr), which is
+              what actually lets a long match card shrink to fit; the bare
+              `grid` class falls back to an auto-sized implicit track that
+              doesn't, which is what let one long pairing name force the
+              whole page wider than the phone screen (2026-09-17). */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {liveBoard.matches
               .filter((m) => m.scorecard_id !== scorecard.id)
               .map((m) => (

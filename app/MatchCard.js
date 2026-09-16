@@ -26,7 +26,7 @@ export function MatchCard({ match }) {
   return (
     <Link
       href={`/scorecards/${match.scorecard_id}`}
-      className="block bg-posgcard rounded-xl border border-posgborder p-4 hover:border-gold/40 transition"
+      className="block min-w-0 w-full bg-posgcard rounded-xl border border-posgborder p-4 hover:border-gold/40 transition"
     >
       {match.group_label && (
         <p className="text-xs text-posgmuted uppercase tracking-wide mb-2 truncate">{match.group_label}</p>

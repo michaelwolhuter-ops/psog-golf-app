@@ -596,7 +596,10 @@ export default function EventDetailPage() {
           <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
             <Swords size={13} className="text-gold" /> Matches
           </h3>
-          <div className="grid sm:grid-cols-2 gap-3">
+          {/* grid-cols-1 explicit, not just the bare `grid` class — see
+              MatchCard.js / scorecards page for why this matters
+              (2026-09-17 mobile overflow fix). */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {liveBoard.matches.map((m) => (
               <MatchCard key={m.scorecard_id} match={m} />
             ))}

@@ -168,7 +168,10 @@ export default function EventMatchesPage() {
 
           <div>
             <h2 className="text-sm font-semibold text-posgtext mb-2">Match Cards</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* grid-cols-1 explicit — see MatchCard.js's 2026-09-17 mobile
+                overflow fix note for why the bare `grid` class alone isn't
+                safe here. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {matches.map((m) => (
                 <MatchCard key={m.scorecard_id} match={m} />
               ))}
