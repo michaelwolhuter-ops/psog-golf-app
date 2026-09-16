@@ -37,7 +37,11 @@ const FORMAT_OPTIONS = [
 
 // Status is auto-derived server-side from this event's scorecards (see
 // lib/eventStatus.js) — this is display-only, never an input.
-const STATUS_LABEL = { upcoming: 'Upcoming', in_progress: 'In Progress', completed: 'Completed' };
+// "Final Results" instead of a plain "Completed" badge, per Mike's ask
+// (2026-09-17) — the event name + this badge is meant to read as its own
+// clean little header ("Bogey Invitational — Final Results"), not just a
+// generic status word, once every scorecard is in.
+const STATUS_LABEL = { upcoming: 'Upcoming', in_progress: 'In Progress', completed: 'Final Results' };
 const STATUS_STYLE = {
   upcoming: 'bg-posgborder text-posgmuted',
   in_progress: 'bg-gold/15 text-gold',
@@ -299,8 +303,6 @@ export default function EventDetailPage() {
 
   if (!event) return <p className="text-posgmuted">Loading…</p>;
 
-  const enteredCount = Object.values(form).filter((v) => v.points !== '' && v.points !== null).length;
-
   // Day-of Awards — deliberately restricted to players whose round is fully
   // finished (thru === 'F'), not just whatever's entered so far. A
   // mid-round player can't fairly be "Last Place" (fewer holes played means
@@ -376,6 +378,11 @@ export default function EventDetailPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Once an event is Final Results, starting another scorecard is
+              an admin correction, not something a player does — hidden for
+              non-admins here (Mike's ask, 2026-09-17), same "clean, no
+              clutter once it's done" principle as the rest of this page. */}
+          {(event.status !== 'completed' || isAdmin) && (
           <Link
             href={`/events/${id}/scorecard/new`}
             className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-1.5 rounded-md hover:bg-fairway/25 transition"
@@ -383,6 +390,7 @@ export default function EventDetailPage() {
           >
             <ClipboardList size={14} /> New Scorecard
           </Link>
+          )}
           {isAdmin && (
           <button
             onClick={() => setDetailsOpen((v) => !v)}
@@ -401,12 +409,6 @@ export default function EventDetailPage() {
           )}
         </div>
       </div>
-      {isAdmin && (
-      <p className="text-posgmuted mb-6">
-        {enteredCount} of {players.length} players have a result recorded.
-      </p>
-      )}
-
       {isAdmin && detailsOpen && (
       <form
         onSubmit={saveMeta}
@@ -515,18 +517,21 @@ export default function EventDetailPage() {
       </form>
       )}
 
-      {/* Event Leaderboard — moved above Scorecards 2026-07-29 per Mike:
-          the standings are what people want to see first when opening an
-          event, the individual scorecards are secondary. Same live feed as
-          before (see the loadLiveBoard effect above), just repositioned.
-          Heading simplified to a right-aligned LIVE pill (only while the
-          event is actually in_progress) instead of a caption sentence
-          underneath — dropped once the event is completed, since at that
-          point this is the final result, not something still updating. */}
+      {/* No more generic "Event Leaderboard" umbrella heading (Mike's ask,
+          2026-09-17 — "clean is what I'm looking for", no filler wrapper
+          text). Just "Final Results" once the event is done, or "Live
+          Standings" with the pulsing LIVE pill while it's still on, then
+          straight into whichever leaderboards actually apply to this
+          event's format(s) — Domination only for Better Ball Match Play,
+          Team only for Better Ball Stableford, Individual and Gross for
+          everything. Same structure every format, nothing hidden behind a
+          link — this page IS the results screen now. */}
       <div className="flex items-center justify-between mt-2 mb-4">
         <div className="flex items-center gap-2">
           <Trophy size={20} className="text-gold" />
-          <h2 className="text-lg font-semibold text-posgtext">Event Leaderboard</h2>
+          <h2 className="text-lg font-semibold text-posgtext">
+            {event.status === 'completed' ? 'Final Results' : 'Live Standings'}
+          </h2>
         </div>
         {event.status === 'in_progress' && (
           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-400 tracking-wide">
@@ -539,26 +544,11 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* Domination Leaderboard — the official team result for a Better
-          Ball Match Play event, shown directly (never behind a link or a
-          button, see the 2026-09-17 fixes) and, per Mike's original ask,
-          FIRST — ahead of Individual and Gross below, not after them. The
-          full broadcast dashboard (match cards + all three leaderboards
-          together) is still one click away at /events/[id]/matches for
-          anyone who wants it. */}
       {liveBoard && liveBoard.matches.length > 0 && (
         <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
-              <Swords size={13} className="text-gold" /> Domination Leaderboard
-            </h3>
-            <Link
-              href={`/events/${id}/matches`}
-              className="text-[11px] text-posgmuted hover:text-posgtext"
-            >
-              Match cards & full results →
-            </Link>
-          </div>
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
+            <Swords size={13} className="text-gold" /> Matchplay Leaderboard
+          </h3>
           <DominationBoard domination={liveBoard.domination || []} />
         </div>
       )}

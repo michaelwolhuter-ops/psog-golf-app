@@ -151,7 +151,7 @@ export default function EventMatchesPage() {
               three rather than pushing the leaderboards down the page. */}
           <div>
             <h2 className="text-sm font-semibold text-posgtext flex items-center gap-1.5 mb-2">
-              <Trophy size={14} className="text-gold" /> Domination Leaderboard
+              <Trophy size={14} className="text-gold" /> Matchplay Leaderboard
             </h2>
             <DominationBoard domination={domination} />
           </div>
