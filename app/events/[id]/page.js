@@ -735,26 +735,23 @@ export default function EventDetailPage() {
         </div>
       )}
 
+      {/* Better Ball Match Play has its own full broadcast-style dashboard
+          (Matches Live cards + Domination Leaderboard) — this is just an
+          entry point into it, not a duplicate of it. */}
       {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-8">
-          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Swords size={13} className="text-gold" /> Matches
-          </h3>
-          <div className="space-y-1">
-            {liveBoard.matches.map((m) => (
-              <div key={m.scorecard_id} className="flex items-center justify-between text-sm">
-                <span className="text-posgtext">
-                  {m.names_a} <span className="text-posgmuted">vs</span> {m.names_b}
-                  {m.group_label ? <span className="text-posgmuted"> — {m.group_label}</span> : ''}
-                </span>
-                <span className="text-gold font-mono font-semibold">
-                  {m.winningTeam ? (m.winningTeam === 'A' ? m.names_a : m.names_b) + ' ' : ''}
-                  {m.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Link
+          href={`/events/${id}/matches`}
+          className="flex items-center justify-between bg-posgcard rounded-xl border border-posgborder p-4 mb-8 hover:border-gold/40 transition"
+        >
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-posgtext">
+            <Swords size={15} className="text-gold" />
+            Matches Live
+            <span className="text-posgmuted font-normal">
+              — {liveBoard.matches.filter((m) => !m.finished).length} in progress
+            </span>
+          </span>
+          <span className="text-xs text-posgmuted">View all →</span>
+        </Link>
       )}
 
       {/* The actual played scorecards for this event, hole by hole — shown

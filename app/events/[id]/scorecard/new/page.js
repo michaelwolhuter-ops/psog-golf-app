@@ -23,6 +23,22 @@ const FORMATS = [
   },
 ];
 
+// The event's own "Format" field (set on the event details form) is a
+// separate, purely descriptive value — a free-text label, not tied to
+// scoring — and was never connected to a scorecard's actual format before
+// this. That gap is exactly what caused a real report (2026-09-14): the
+// event was set to "Better Ball Match Play", but starting a round still
+// defaulted to Individual Stableford here, with no link between the two, so
+// it looked like the selection wasn't "sticking". This maps the event's
+// label onto the matching scorecard format so a new round defaults to what
+// the event was already set up as — still changeable per group below, for
+// the (rare) case one group plays something different from the event norm.
+const EVENT_FORMAT_TO_SCORECARD_FORMAT = {
+  'Individual Stableford': 'individual_stableford',
+  'Better Ball Stableford': 'better_ball_stableford',
+  'Better Ball Match Play': 'better_ball_match_play',
+};
+
 // Setup screen: pick who's playing together, what format, and (for the two
 // better-ball formats) which team each player is on — before any hole gets
 // entered. One scorecard = one group of players playing together, not one
@@ -51,6 +67,8 @@ export default function NewScorecardPage() {
         }
         setEvent(body.event);
         setPlayers((body.players || []).filter((p) => p.active));
+        const mapped = EVENT_FORMAT_TO_SCORECARD_FORMAT[body.event.format];
+        if (mapped) setFormat(mapped);
       });
     fetch(`/api/events/${id}/scorecards`, { cache: 'no-store' })
       .then((res) => res.json())
@@ -200,7 +218,12 @@ export default function NewScorecardPage() {
       )}
 
       <form onSubmit={createScorecard} className="bg-posgcard rounded-xl border border-posgborder p-5">
-        <label className="block text-xs text-posgmuted mb-2">Format</label>
+        <label className="block text-xs text-posgmuted mb-1">Format</label>
+        <p className="text-[11px] text-posgmuted mb-2">
+          {EVENT_FORMAT_TO_SCORECARD_FORMAT[event.format]
+            ? `Defaults to this event's format (${event.format}) — change it below if this group is playing something different.`
+            : "This event's own Format field doesn't set a scoring format — pick this group's below."}
+        </p>
         <div className="grid gap-2 mb-5">
           {FORMATS.map((f) => (
             <label

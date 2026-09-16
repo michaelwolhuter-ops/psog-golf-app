@@ -23,6 +23,7 @@ import {
   Award,
 } from 'lucide-react';
 import { ScorecardTable } from '@/app/ScorecardTable';
+import { MatchCard } from '@/app/MatchCard';
 import {
   strokesReceived,
   resolveHoleScore,
@@ -30,6 +31,8 @@ import {
   betterBallHolePoints,
   matchPlayHoleResult,
   matchStatus,
+  matchProgression,
+  matchHeadline,
   roundHandicapForStrokes,
 } from '@/lib/scoring';
 import { useConfirm } from '@/lib/useConfirm';
@@ -42,6 +45,16 @@ import { useScorecardLock } from '@/lib/ScorecardLockContext';
 function fmtHcp(n) {
   const r = roundHandicapForStrokes(n);
   return r === null || r === undefined ? '—' : String(r);
+}
+
+// Timeline-only cleanup of matchStatus's raw scoreboard label ("2UP thru
+// 11" -> "2 Up") — the hole number is already its own column in the
+// timeline, so the "thru N" part would just repeat it.
+function prettyMatchLabel(raw) {
+  if (raw.includes('&')) return raw.replace('&', ' & ');
+  if (raw.startsWith('AS')) return 'All Square';
+  const m = raw.match(/^(\d+)UP/);
+  return m ? `${m[1]} Up` : raw;
 }
 
 const QUICK_TAPS = [
@@ -456,11 +469,16 @@ export default function ScorecardEntryPage() {
   }
 
   let liveMatch = null;
+  let matchHoleResults = [];
+  let matchNamesA = '';
+  let matchNamesB = '';
   if (isMatchPlay) {
     const teamA = players.filter((p) => p.team_number === 1).map((p) => p.id);
     const teamB = players.filter((p) => p.team_number === 2).map((p) => p.id);
+    matchNamesA = players.filter((p) => p.team_number === 1).map((p) => p.name).join(' & ');
+    matchNamesB = players.filter((p) => p.team_number === 2).map((p) => p.name).join(' & ');
     const playedHoles = [...holesCompleted].sort((a, b) => a - b);
-    const results = playedHoles.map((h) => {
+    matchHoleResults = playedHoles.map((h) => {
       const rows = holeScores.filter((hs) => hs.hole_number === h);
       const aPts = rows
         .filter((r) => teamA.includes(r.player_id))
@@ -470,8 +488,10 @@ export default function ScorecardEntryPage() {
         .reduce((best, r) => betterBallHolePoints(best, r.stableford_points), 0);
       return matchPlayHoleResult(aPts, bPts);
     });
-    if (results.length > 0) liveMatch = matchStatus(results);
+    if (matchHoleResults.length > 0) liveMatch = matchStatus(matchHoleResults);
   }
+  const matchTimeline = isMatchPlay ? matchProgression(matchHoleResults) : [];
+  const matchHeadlineInfo = isMatchPlay ? matchHeadline(liveMatch, matchNamesA, matchNamesB) : null;
 
   // Players only get "Back to event" once this round is actually finished
   // (or if they're admin) — otherwise the live leaderboard already shown
@@ -600,17 +620,6 @@ export default function ScorecardEntryPage() {
           );
         })}
       </div>
-
-      {liveMatch && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-3 mb-6 flex items-center gap-2">
-          <Swords size={16} className="text-gold" />
-          <span className="text-sm text-posgtext">
-            <span className="font-semibold">Team {liveMatch.winningTeam || ''}</span>{' '}
-            {liveMatch.label}
-            {liveMatch.decided && ' — match decided'}
-          </span>
-        </div>
-      )}
 
       {/* Current hole — hidden once completed; the server blocks writes
           anyway, and the reopen banner above already explains why. */}
@@ -781,6 +790,138 @@ export default function ScorecardEntryPage() {
         <p className="text-posgmuted">This course has no data for hole {currentHole}.</p>
       ) : null}
 
+      {/* Below the scorecard itself, per Mike's ask (2026-09-16): current
+          match status first, then what's happening in the rest of the
+          field, then the individual leaderboard — not above the entry
+          screen, where it used to push the actual scoring down the page. */}
+      {isMatchPlay && liveMatch && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-5 mb-6">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <span
+              className={
+                'text-sm font-semibold truncate ' +
+                (matchHeadlineInfo.color === 'a' ? 'text-fairway' : 'text-posgtext')
+              }
+            >
+              {matchNamesA}
+            </span>
+            <span className="text-[10px] text-posgmuted shrink-0">vs</span>
+            <span
+              className={
+                'text-sm font-semibold truncate text-right ' +
+                (matchHeadlineInfo.color === 'b' ? 'text-gold' : 'text-posgtext')
+              }
+            >
+              {matchNamesB}
+            </span>
+          </div>
+
+          <div className="flex justify-center mb-1">
+            <span
+              className={
+                'px-5 py-2 rounded-full text-2xl font-extrabold tracking-wide transition-all ' +
+                (matchHeadlineInfo.color === 'a'
+                  ? 'bg-fairway text-black'
+                  : matchHeadlineInfo.color === 'b'
+                  ? 'bg-gold text-black'
+                  : 'bg-posgborder text-posgtext')
+              }
+            >
+              {matchHeadlineInfo.text}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="text-xs text-posgmuted font-mono">
+              {liveMatch.decided
+                ? `Match finished after ${liveMatch.holesPlayed} holes`
+                : `Hole ${Math.min(liveMatch.holesPlayed + 1, 18)} · ${liveMatch.holesRemaining} to play`}
+            </span>
+            {!liveMatch.decided && liveMatch.dormie && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-semibold tracking-wide">
+                DORMIE
+              </span>
+            )}
+            {liveMatch.decided && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-fairway/15 text-fairway font-semibold tracking-wide">
+                FINISHED
+              </span>
+            )}
+          </div>
+
+          {/* 18-hole tracker — each played hole fills in with whoever won it
+              (fairway = Team 1, gold = Team 2, grey = halved), the hole
+              about to be played is ringed, everything unplayed stays blank. */}
+          <div className="flex flex-wrap gap-1 justify-center mb-4">
+            {Array.from({ length: 18 }, (_, i) => i + 1).map((holeNum) => {
+              const entry = matchTimeline.find((t) => t.hole_number === holeNum);
+              const isCurrent = !liveMatch.decided && holeNum === Math.min(liveMatch.holesPlayed + 1, 18);
+              let cls = 'bg-posgbg text-posgmuted border border-posgborder';
+              if (entry) {
+                if (entry.result === 'A') cls = 'bg-fairway text-black';
+                else if (entry.result === 'B') cls = 'bg-gold text-black';
+                else cls = 'bg-posgborder text-posgtext';
+              }
+              return (
+                <span
+                  key={holeNum}
+                  className={
+                    'w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ' +
+                    cls +
+                    (isCurrent ? ' ring-2 ring-posgtext' : '')
+                  }
+                >
+                  {holeNum}
+                </span>
+              );
+            })}
+          </div>
+
+          {/* Hole-by-hole timeline — how the match actually swung, stops at
+              the hole it was decided on (see matchProgression). */}
+          {matchTimeline.length > 0 && (
+            <div className="space-y-1 border-t border-posgborder pt-3">
+              {matchTimeline.map((t) => (
+                <div key={t.hole_number} className="flex items-center justify-between text-xs">
+                  <span className="text-posgmuted font-mono">Hole {t.hole_number}</span>
+                  <span
+                    className={
+                      'font-medium ' +
+                      (t.result === 'A' ? 'text-fairway' : t.result === 'B' ? 'text-gold' : 'text-posgmuted')
+                    }
+                  >
+                    {t.result === 'A' ? `${matchNamesA} won` : t.result === 'B' ? `${matchNamesB} won` : 'Halved'}
+                  </span>
+                  <span className="text-posgtext font-mono">{prettyMatchLabel(t.label)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {liveBoard && liveBoard.matches.filter((m) => m.scorecard_id !== scorecard.id).length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
+              <Swords size={13} className="text-gold" /> Other Matches
+            </h2>
+            {scorecard.event_id && (
+              <Link href={`/events/${scorecard.event_id}/matches`} className="text-[11px] text-posgmuted hover:text-posgtext">
+                View all →
+              </Link>
+            )}
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {liveBoard.matches
+              .filter((m) => m.scorecard_id !== scorecard.id)
+              .map((m) => (
+                <MatchCard key={m.scorecard_id} match={m} />
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Live leaderboard across the WHOLE event — every scorecard, in
           progress or completed, combined. Identical to "just this group"
           when this is the only scorecard running for the event right now.
@@ -876,28 +1017,6 @@ export default function ScorecardEntryPage() {
               </span>
             </div>
           ))}
-        </div>
-      )}
-
-      {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Swords size={13} className="text-gold" /> Live Matches
-          </h2>
-          <div className="space-y-1">
-            {liveBoard.matches.map((m) => (
-              <div key={m.scorecard_id} className="flex items-center justify-between text-sm">
-                <span className="text-posgtext">
-                  {m.names_a} <span className="text-posgmuted">vs</span> {m.names_b}
-                  {m.group_label ? <span className="text-posgmuted"> — {m.group_label}</span> : ''}
-                </span>
-                <span className="text-gold font-mono font-semibold">
-                  {m.winningTeam ? (m.winningTeam === 'A' ? m.names_a : m.names_b) + ' ' : ''}
-                  {m.label}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { betterBallHolePoints, matchPlayHoleResult, matchStatus } from "@/lib/scoring";
+import { betterBallHolePoints, matchPlayHoleResult, matchStatus, matchPerspective } from "@/lib/scoring";
 
 export const dynamic = "force-dynamic";
 
@@ -272,6 +272,7 @@ export async function GET(request, { params }) {
   // --- Live matches (better ball match play — never fed a points table,
   // shown as running/final match status instead). ---
   const matches = [];
+  const domination = [];
   for (const sc of scorecards || []) {
     if (sc.format !== "better_ball_match_play") continue;
     const members = (scorecardPlayers || []).filter((sp) => sp.scorecard_id === sc.id);
@@ -315,10 +316,38 @@ export async function GET(request, { params }) {
       group_label: sc.group_label,
       names_a: namesA,
       names_b: namesB,
+      finished: sc.status === "completed",
       status: sc.status,
       ...status,
     });
+    // Domination leaderboard: the same match, but as two independent rows —
+    // one per team, each reading the score from its own side ("4 Up" /
+    // "4 Down" instead of a fixed A/B) — so every pairing in the field can
+    // be ranked together on one leaderboard by how well IT is doing, not
+    // just how each match is going. See matchPerspective in lib/scoring.js.
+    [1, 2].forEach((teamNumber) => {
+      const perspective = matchPerspective(status, teamNumber);
+      domination.push({
+        scorecard_id: sc.id,
+        team_number: teamNumber,
+        names: teamNumber === 1 ? namesA : namesB,
+        opponent_names: teamNumber === 1 ? namesB : namesA,
+        group_label: sc.group_label,
+        finished: sc.status === "completed",
+        holes_played: status.holesPlayed,
+        holes_remaining: status.holesRemaining,
+        dormie: status.dormie,
+        ...perspective,
+      });
+    });
   }
+  domination.sort((a, b) => {
+    if (b.dominance !== a.dominance) return b.dominance - a.dominance;
+    return b.holes_played - a.holes_played;
+  });
+  domination.forEach((d, i) => {
+    d.position = i + 1;
+  });
 
-  return NextResponse.json({ individual, team, matches });
+  return NextResponse.json({ individual, team, matches, domination });
 }
