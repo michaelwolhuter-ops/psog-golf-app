@@ -8,6 +8,7 @@ import { DominationBoard } from '@/app/DominationBoard';
 import { MatchCard } from '@/app/MatchCard';
 import { useConfirm } from '@/lib/useConfirm';
 import { useAdmin } from '@/lib/AdminContext';
+import { useTopBarLabel } from '@/lib/TopBarContext';
 import {
   ArrowLeft,
   Flag,
@@ -86,6 +87,23 @@ export default function EventDetailPage() {
 
   const { confirm, ConfirmDialog } = useConfirm();
   const { isAdmin } = useAdmin();
+  const { setLabel: setTopBarLabel } = useTopBarLabel();
+
+  // While an event is actually live, a non-admin viewer's header is
+  // stripped down to just the New Scorecard button (Mike's ask,
+  // 2026-09-17) — the event name moves up into AppShell's top bar instead
+  // of disappearing, same pattern as the scorecard entry screen. Once the
+  // event isn't live (upcoming, or Final Results), the full header comes
+  // back for reference — "the headings can come back for info later on" —
+  // so this only overrides the top bar during that one live window.
+  useEffect(() => {
+    if (event && !isAdmin && event.status === 'in_progress') {
+      setTopBarLabel(event.name);
+    } else {
+      setTopBarLabel(null);
+    }
+    return () => setTopBarLabel(null);
+  }, [event, isAdmin, setTopBarLabel]);
 
   function load() {
     fetch(`/api/events/${id}`, { cache: 'no-store' })
@@ -354,62 +372,84 @@ export default function EventDetailPage() {
   const hasAwards =
     threePuttLeaders.length > 0 || lastPlacePlayers.length > 0 || hundredsClub.length > 0 || !!tutuPlayer;
 
+  // While the event is actually live, a non-admin viewer gets none of the
+  // header below — name, type/status badges, all of it — just the New
+  // Scorecard button, per Mike's ask (2026-09-17): "in viewer mode there
+  // doesn't need to be any heading... just new scorecard button." The
+  // event name still shows up top, just moved into AppShell's top bar (see
+  // the useTopBarLabel effect above). Once the event isn't live anymore
+  // (upcoming, or Final Results), the full header is back — "the headings
+  // can come back for info later on."
+  const liveViewerMode = !isAdmin && event.status === 'in_progress';
+
   return (
     <div>
       {ConfirmDialog}
-      <Link
-        href="/events"
-        className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
-      >
-        <ArrowLeft size={14} /> All events
-      </Link>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-2">
-          <Flag size={22} className="text-fairway" />
-          <h1 className="text-2xl font-bold text-posgtext">{event.name}</h1>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-posgborder text-posgmuted">
-            {typeLabel[event.event_type] || event.event_type}
-          </span>
-          <span
-            className={'text-xs px-2 py-0.5 rounded-full ' + (STATUS_STYLE[event.status] || STATUS_STYLE.upcoming)}
-            title="Set automatically from this event's scorecards — not editable by hand"
-          >
-            {STATUS_LABEL[event.status] || event.status}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Once an event is Final Results, starting another scorecard is
-              an admin correction, not something a player does — hidden for
-              non-admins here (Mike's ask, 2026-09-17), same "clean, no
-              clutter once it's done" principle as the rest of this page. */}
-          {(event.status !== 'completed' || isAdmin) && (
+      {liveViewerMode ? (
+        <Link
+          href={`/events/${id}/scorecard/new`}
+          className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-2 rounded-md hover:bg-fairway/25 transition mb-4"
+          title="Digital hole-by-hole scorecard — feeds results in automatically once completed"
+        >
+          <ClipboardList size={14} /> New Scorecard
+        </Link>
+      ) : (
+        <>
           <Link
-            href={`/events/${id}/scorecard/new`}
-            className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-1.5 rounded-md hover:bg-fairway/25 transition"
-            title="Digital hole-by-hole scorecard — feeds results in automatically once completed"
+            href="/events"
+            className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
           >
-            <ClipboardList size={14} /> New Scorecard
+            <ArrowLeft size={14} /> All events
           </Link>
-          )}
-          {isAdmin && (
-          <button
-            onClick={() => setDetailsOpen((v) => !v)}
-            className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
-          >
-            <ClipboardEdit size={14} /> {detailsOpen ? 'Hide Details' : 'Edit Event Details'}
-          </button>
-          )}
-          {isAdmin && (
-          <button
-            onClick={deleteEvent}
-            className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
-          >
-            <Trash2 size={14} /> Delete event
-          </button>
-          )}
-        </div>
-      </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <Flag size={22} className="text-fairway" />
+              <h1 className="text-2xl font-bold text-posgtext">{event.name}</h1>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-posgborder text-posgmuted">
+                {typeLabel[event.event_type] || event.event_type}
+              </span>
+              <span
+                className={'text-xs px-2 py-0.5 rounded-full ' + (STATUS_STYLE[event.status] || STATUS_STYLE.upcoming)}
+                title="Set automatically from this event's scorecards — not editable by hand"
+              >
+                {STATUS_LABEL[event.status] || event.status}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Once an event is Final Results, starting another scorecard
+                  is an admin correction, not something a player does —
+                  hidden for non-admins here, same "clean, no clutter once
+                  it's done" principle as the rest of this page. */}
+              {(event.status !== 'completed' || isAdmin) && (
+              <Link
+                href={`/events/${id}/scorecard/new`}
+                className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-1.5 rounded-md hover:bg-fairway/25 transition"
+                title="Digital hole-by-hole scorecard — feeds results in automatically once completed"
+              >
+                <ClipboardList size={14} /> New Scorecard
+              </Link>
+              )}
+              {isAdmin && (
+              <button
+                onClick={() => setDetailsOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+              >
+                <ClipboardEdit size={14} /> {detailsOpen ? 'Hide Details' : 'Edit Event Details'}
+              </button>
+              )}
+              {isAdmin && (
+              <button
+                onClick={deleteEvent}
+                className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition"
+              >
+                <Trash2 size={14} /> Delete event
+              </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
       {isAdmin && detailsOpen && (
       <form
         onSubmit={saveMeta}
@@ -552,11 +592,11 @@ export default function EventDetailPage() {
           each card just naturally reads its final "Won 4 & 3" result
           instead of a running score once finished. */}
       {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-6">
           <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
             <Swords size={13} className="text-gold" /> Matches
           </h3>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid sm:grid-cols-2 gap-3">
             {liveBoard.matches.map((m) => (
               <MatchCard key={m.scorecard_id} match={m} />
             ))}
@@ -565,7 +605,7 @@ export default function EventDetailPage() {
       )}
 
       {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-6">
           <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
             <Swords size={13} className="text-gold" /> Matchplay Leaderboard
           </h3>

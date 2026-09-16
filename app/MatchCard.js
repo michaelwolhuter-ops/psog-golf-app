@@ -29,14 +29,31 @@ export function MatchCard({ match }) {
       className="block bg-posgcard rounded-xl border border-posgborder p-4 hover:border-gold/40 transition"
     >
       {match.group_label && (
-        <p className="text-[10px] text-posgmuted uppercase tracking-wide mb-2 truncate">{match.group_label}</p>
+        <p className="text-xs text-posgmuted uppercase tracking-wide mb-2 truncate">{match.group_label}</p>
       )}
+      {/* min-w-0 on both name spans is load-bearing, not decorative — a
+          flex child's default min-width is auto (= its content width), so
+          without this, `truncate` never actually engages on a long pairing
+          name like "James Prentice & Darren Odendaal". The row (and the
+          whole card, and the grid it sits in) just got forced wider than
+          the screen instead — that's what was squeezing every other box on
+          the page sideways. */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        <span className={'text-sm font-semibold truncate ' + (headline.color === 'a' ? 'text-fairway' : 'text-posgtext')}>
+        <span
+          className={
+            'min-w-0 text-base font-semibold truncate ' +
+            (headline.color === 'a' ? 'text-fairway' : 'text-posgtext')
+          }
+        >
           {match.names_a}
         </span>
-        <span className="text-[10px] text-posgmuted shrink-0 px-1">vs</span>
-        <span className={'text-sm font-semibold truncate text-right ' + (headline.color === 'b' ? 'text-gold' : 'text-posgtext')}>
+        <span className="text-xs text-posgmuted shrink-0 px-1">vs</span>
+        <span
+          className={
+            'min-w-0 text-base font-semibold truncate text-right ' +
+            (headline.color === 'b' ? 'text-gold' : 'text-posgtext')
+          }
+        >
           {match.names_b}
         </span>
       </div>
@@ -45,11 +62,13 @@ export function MatchCard({ match }) {
           headline ("Mark & BT won 4 & 3") is much longer than "3 UP", and
           forcing that into a pill shape on a narrow phone either overflowed
           the card or broke the pill's rounded corners when it wrapped.
-          This shape holds up either way. */}
+          This shape holds up either way. Bumped to the biggest text on the
+          card, mobile included — this number/result is the whole point of
+          the card, so it should read the largest, not the names around it. */}
       <div className="flex items-center justify-center px-1">
         <span
           className={
-            'max-w-full px-3 py-1.5 rounded-xl text-sm sm:text-base font-extrabold tracking-wide text-center break-words leading-snug transition-all ' +
+            'max-w-full px-3 py-1.5 rounded-xl text-lg font-extrabold tracking-wide text-center break-words leading-snug transition-all ' +
             LEADER_BADGE[headline.color]
           }
         >
@@ -58,7 +77,7 @@ export function MatchCard({ match }) {
       </div>
 
       <div className="flex items-center justify-center gap-2 mt-2.5">
-        <span className="text-[11px] text-posgmuted font-mono">{holeText}</span>
+        <span className="text-xs text-posgmuted font-mono">{holeText}</span>
         {!match.finished && match.dormie && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-semibold tracking-wide">
             DORMIE
