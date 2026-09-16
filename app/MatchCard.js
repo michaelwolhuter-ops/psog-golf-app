@@ -41,10 +41,15 @@ export function MatchCard({ match }) {
         </span>
       </div>
 
-      <div className="flex items-center justify-center">
+      {/* rounded-xl + break-words, not rounded-full — a decided match's
+          headline ("Mark & BT won 4 & 3") is much longer than "3 UP", and
+          forcing that into a pill shape on a narrow phone either overflowed
+          the card or broke the pill's rounded corners when it wrapped.
+          This shape holds up either way. */}
+      <div className="flex items-center justify-center px-1">
         <span
           className={
-            'px-4 py-1.5 rounded-full text-base font-extrabold tracking-wide transition-all ' +
+            'max-w-full px-3 py-1.5 rounded-xl text-sm sm:text-base font-extrabold tracking-wide text-center break-words leading-snug transition-all ' +
             LEADER_BADGE[headline.color]
           }
         >

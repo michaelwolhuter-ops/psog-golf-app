@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
 import { AdminProvider, useAdmin } from "@/lib/AdminContext";
 import { ScorecardLockProvider, useScorecardLock } from "@/lib/ScorecardLockContext";
+import { TopBarProvider, useTopBarLabel } from "@/lib/TopBarContext";
 
 // Wraps Sidebar + page content and owns the open/closed state for the
 // mobile drawer. Desktop layout is untouched — the sidebar is always
@@ -21,7 +22,9 @@ export default function AppShell({ children }) {
   return (
     <AdminProvider>
       <ScorecardLockProvider>
-        <AppShellInner>{children}</AppShellInner>
+        <TopBarProvider>
+          <AppShellInner>{children}</AppShellInner>
+        </TopBarProvider>
       </ScorecardLockProvider>
     </AdminProvider>
   );
@@ -34,6 +37,7 @@ function AppShellInner({ children }) {
   const isHome = pathname === "/";
   const { lockedScorecardId, ready, setLockedScorecardId } = useScorecardLock();
   const { isAdmin, ready: adminReady } = useAdmin();
+  const { label: topBarLabel } = useTopBarLabel();
 
   // The actual enforcement of the player lock: no matter HOW a locked
   // non-admin ends up somewhere else (sidebar logo, browser back-gesture,
@@ -105,7 +109,12 @@ function AppShellInner({ children }) {
           <Menu size={22} />
         </button>
         {!isHome && (
-          <img src="/logo.png" alt="POSG Tour" className="ml-2 h-14 w-auto" />
+          <div className="ml-2 flex items-center gap-2 min-w-0">
+            <img src="/logo.png" alt="POSG Tour" className="h-14 w-auto shrink-0" />
+            {topBarLabel && (
+              <span className="text-xs text-posgmuted truncate">{topBarLabel}</span>
+            )}
+          </div>
         )}
       </div>
 

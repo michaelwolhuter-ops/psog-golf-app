@@ -38,6 +38,7 @@ import {
 import { useConfirm } from '@/lib/useConfirm';
 import { useAdmin } from '@/lib/AdminContext';
 import { useScorecardLock } from '@/lib/ScorecardLockContext';
+import { useTopBarLabel } from '@/lib/TopBarContext';
 
 // Same rounding rule used everywhere else a handicap is displayed (dashboard,
 // player profile) — shows the whole-number index actually used to work out
@@ -100,6 +101,20 @@ export default function ScorecardEntryPage() {
   const { confirm, ConfirmDialog } = useConfirm();
   const { isAdmin } = useAdmin();
   const { setLockedScorecardId } = useScorecardLock();
+  const { setLabel: setTopBarLabel } = useTopBarLabel();
+
+  // The page's own header shows nothing for a non-admin (2026-09-17 cleanup
+  // — Mike wanted this screen to be just the hole picker and score entry,
+  // nothing else) — this is what replaces it: the round's format/group
+  // name moves up into AppShell's fixed top bar instead of disappearing
+  // entirely. Cleared on unmount so it doesn't linger once this page isn't
+  // the one on screen.
+  useEffect(() => {
+    if (scorecard) {
+      setTopBarLabel(scorecard.group_label || FORMAT_LABEL[scorecard.format]);
+    }
+    return () => setTopBarLabel(null);
+  }, [scorecard, setTopBarLabel]);
 
   const [currentHole, setCurrentHole] = useState(1);
   // Draft entry for whichever hole is on screen right now — cleared/reloaded
@@ -509,88 +524,84 @@ export default function ScorecardEntryPage() {
   return (
     <div>
       {ConfirmDialog}
-      {canLeave ? (
-        <Link
-          href={`/events/${scorecard.event_id}`}
-          className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
-        >
-          <ArrowLeft size={14} /> Back to event
-        </Link>
-      ) : (
-        <p className="text-xs text-posgmuted mb-4">
-          Finish this round to head back to the event.
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-2">
-          <Flag size={20} className="text-fairway" />
-          <h1 className="text-xl font-bold text-posgtext">
-            {scorecard.group_label || FORMAT_LABEL[scorecard.format]}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setCardViewOpen(true);
-              loadOtherCards();
-            }}
-            className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
-          >
-            <Eye size={14} /> View Card
-          </button>
-          {scorecard.status === 'completed' ? (
-            isAdmin && (
-              <button
-                onClick={reopenRound}
-                disabled={reopening}
-                className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition disabled:opacity-50"
-              >
-                <RotateCcw size={14} /> {reopening ? 'Reopening…' : 'Reopen round'}
-              </button>
-            )
-          ) : (
-            <button
-              onClick={finishRound}
-              disabled={finishing || holesCompleted.size === 0}
-              className="inline-flex items-center gap-1.5 text-sm bg-gold text-black font-medium px-3 py-1.5 rounded-md hover:brightness-95 transition disabled:opacity-40"
+      {/* Admin gets the full header (back link, title, every control) —
+          unchanged from before. A non-admin gets NOTHING here (Mike's ask,
+          2026-09-17): no back link, no title, no format/course caption, no
+          completed-round banner. The round's name moved up into AppShell's
+          top bar (see the useTopBarLabel effect above), and the hole
+          picker below is deliberately the very first thing a non-admin
+          sees on this page. Their View Card / Finish Round buttons live
+          further down, right after the hole entry card. */}
+      {isAdmin && (
+        <>
+          {canLeave ? (
+            <Link
+              href={`/events/${scorecard.event_id}`}
+              className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
             >
-              <Trophy size={14} /> {finishing ? 'Finishing…' : 'Finish Round'}
-            </button>
+              <ArrowLeft size={14} /> Back to event
+            </Link>
+          ) : (
+            <p className="text-xs text-posgmuted mb-4">
+              Finish this round to head back to the event.
+            </p>
           )}
-          {/* Admin-only, full stop, as of 2026-08-07 (Mike's explicit call
-              after repeated stuck-device bugs traced back to this button):
-              a non-admin used to be able to Abandon (= permanently delete)
-              their own in-progress round, which is exactly what kept
-              leaving devices locked to a scorecard that no longer existed.
-              The only way a non-admin can now exit an in-progress round is
-              Finish Round below — and once finished, only an admin can
-              reopen or delete it. This isn't a UI tweak, it removes the
-              non-admin delete path entirely so that class of bug can't
-              happen again. */}
-          {isAdmin && (
-          <button
-            onClick={deleteScorecard}
-            disabled={deleting}
-            className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition disabled:opacity-50"
-            title={scorecard.status === 'completed' ? 'Delete this scorecard' : 'Abandon this round'}
-          >
-            <Trash2 size={14} /> {deleting ? 'Deleting…' : scorecard.status === 'completed' ? 'Delete' : 'Abandon'}
-          </button>
-          )}
-        </div>
-      </div>
-      <p className="text-posgmuted text-sm mb-4">
-        {FORMAT_LABEL[scorecard.format]} · {course.name} · {holesCompleted.size} of 18 holes entered
-      </p>
 
-      {scorecard.status === 'completed' && (
-        <div className="bg-fairway/10 border border-fairway/30 rounded-xl p-3 mb-6 text-sm text-fairway">
-          This round is finished and has already fed its results into the event.{' '}
-          {isAdmin
-            ? 'Use "Reopen round" above to correct a mistake, or view the full card on the event page.'
-            : 'View the full card on the event page.'}
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <Flag size={20} className="text-fairway" />
+              <h1 className="text-xl font-bold text-posgtext">
+                {scorecard.group_label || FORMAT_LABEL[scorecard.format]}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setCardViewOpen(true);
+                  loadOtherCards();
+                }}
+                className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition"
+              >
+                <Eye size={14} /> View Card
+              </button>
+              {scorecard.status === 'completed' ? (
+                <button
+                  onClick={reopenRound}
+                  disabled={reopening}
+                  className="inline-flex items-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-1.5 rounded-md hover:bg-posgcardhover transition disabled:opacity-50"
+                >
+                  <RotateCcw size={14} /> {reopening ? 'Reopening…' : 'Reopen round'}
+                </button>
+              ) : (
+                <button
+                  onClick={finishRound}
+                  disabled={finishing || holesCompleted.size === 0}
+                  className="inline-flex items-center gap-1.5 text-sm bg-gold text-black font-medium px-3 py-1.5 rounded-md hover:brightness-95 transition disabled:opacity-40"
+                >
+                  <Trophy size={14} /> {finishing ? 'Finishing…' : 'Finish Round'}
+                </button>
+              )}
+              <button
+                onClick={deleteScorecard}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 text-sm text-posgmuted hover:text-red-400 transition disabled:opacity-50"
+                title={scorecard.status === 'completed' ? 'Delete this scorecard' : 'Abandon this round'}
+              >
+                <Trash2 size={14} /> {deleting ? 'Deleting…' : scorecard.status === 'completed' ? 'Delete' : 'Abandon'}
+              </button>
+            </div>
+          </div>
+          <p className="text-posgmuted text-sm mb-4">
+            {FORMAT_LABEL[scorecard.format]} · {course.name} · {holesCompleted.size} of 18 holes entered
+          </p>
+
+          {scorecard.status === 'completed' && (
+            <div className="bg-fairway/10 border border-fairway/30 rounded-xl p-3 mb-6 text-sm text-fairway">
+              This round is finished and has already fed its results into the event. Use "Reopen
+              round" above to correct a mistake, or view the full card on the event page.
+            </div>
+          )}
+        </>
       )}
 
       {error && scorecard.status === 'completed' && (
@@ -713,7 +724,13 @@ export default function ScorecardEntryPage() {
                       1 on desktop) instead of being forced onto a 3rd line
                       by living in a separate row of its own. Ring sits
                       before More per Mike's ask. */}
-                  <div className="flex flex-wrap gap-1.5">
+                  {/* Grid, not flex-wrap — a wrapped flex row leaves
+                      whatever gap is left on the last line of each row
+                      empty (buttons only as wide as their own label), so
+                      the row never actually reached the edges of the
+                      screen on a phone. A 3-column grid stretches every
+                      button to fill its cell instead, edge to edge. */}
+                  <div className="grid grid-cols-3 gap-1.5">
                     {QUICK_TAPS.map((qt) => {
                       const value = Math.max(1, hole.par + qt.offset);
                       const selected = rawGross === value && !rawRung;
@@ -722,7 +739,7 @@ export default function ScorecardEntryPage() {
                           key={qt.label}
                           onClick={() => tap(player.id, value)}
                           className={
-                            'text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
+                            'text-xs px-2 py-2 rounded-md font-medium transition ' +
                             (selected
                               ? 'bg-fairway text-black'
                               : 'bg-posgborder text-posgtext hover:bg-posgcardhover')
@@ -735,7 +752,7 @@ export default function ScorecardEntryPage() {
                     <button
                       onClick={() => tapRing(player.id)}
                       className={
-                        'text-xs px-2.5 py-1.5 rounded-md font-medium transition ' +
+                        'text-xs px-2 py-2 rounded-md font-medium transition ' +
                         (rung ? 'bg-gold text-black' : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
                       }
                       title="Picked up without finishing — records triple bogey, 0 pts, automatically"
@@ -746,7 +763,7 @@ export default function ScorecardEntryPage() {
                       onClick={() =>
                         setExpandedPlayer(expandedPlayer === player.id ? null : player.id)
                       }
-                      className="text-xs px-2.5 py-1.5 rounded-md font-medium bg-posgborder text-posgmuted hover:bg-posgcardhover transition"
+                      className="text-xs px-2 py-2 rounded-md font-medium bg-posgborder text-posgmuted hover:bg-posgcardhover transition"
                     >
                       More…
                     </button>
@@ -789,6 +806,34 @@ export default function ScorecardEntryPage() {
       ) : scorecard.status !== 'completed' ? (
         <p className="text-posgmuted">This course has no data for hole {currentHole}.</p>
       ) : null}
+
+      {/* Non-admin's only two buttons, full stop (2026-09-17) — placed
+          here, after the actual score entry, rather than up top where the
+          admin header used to put them. flex-1 on both so they split the
+          full row width evenly edge to edge, instead of shrink-wrapping to
+          their label like a normal inline button. */}
+      {!isAdmin && (
+        <div className="flex items-center gap-2 mb-6">
+          <button
+            onClick={() => {
+              setCardViewOpen(true);
+              loadOtherCards();
+            }}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm bg-posgborder text-posgtext px-3 py-2.5 rounded-md hover:bg-posgcardhover transition"
+          >
+            <Eye size={14} /> View Card
+          </button>
+          {scorecard.status !== 'completed' && (
+            <button
+              onClick={finishRound}
+              disabled={finishing || holesCompleted.size === 0}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm bg-gold text-black font-medium px-3 py-2.5 rounded-md hover:brightness-95 transition disabled:opacity-40"
+            >
+              <Trophy size={14} /> {finishing ? 'Finishing…' : 'Finish Round'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Below the scorecard itself, per Mike's ask (2026-09-16): current
           match status first, then what's happening in the rest of the

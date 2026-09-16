@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import ScorecardsSection from './ScorecardsSection';
 import { DominationBoard } from '@/app/DominationBoard';
+import { MatchCard } from '@/app/MatchCard';
 import { useConfirm } from '@/lib/useConfirm';
 import { useAdmin } from '@/lib/AdminContext';
 import {
@@ -543,6 +544,25 @@ export default function EventDetailPage() {
           </span>
         )}
       </div>
+
+      {/* Live Match Status — every match as the same card shown inside a
+          scorecard's "Other Matches" section, so a viewer who never opens
+          a scorecard can still see exactly how every match stands. Kept
+          visible after the event finishes too (Mike's ask, 2026-09-17) —
+          each card just naturally reads its final "Won 4 & 3" result
+          instead of a running score once finished. */}
+      {liveBoard && liveBoard.matches.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
+            <Swords size={13} className="text-gold" /> Matches
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {liveBoard.matches.map((m) => (
+              <MatchCard key={m.scorecard_id} match={m} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {liveBoard && liveBoard.matches.length > 0 && (
         <div className="mb-4">
