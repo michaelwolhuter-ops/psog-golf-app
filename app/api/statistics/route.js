@@ -44,6 +44,13 @@ export async function GET() {
   const perPlayer = [];
   holeAggByPlayer.forEach((agg, playerId) => {
     const extremes = deriveRoundExtremes(agg);
+    // Birdies/Pars/Rings/3-Putts leaderboards rank per-round averages, not
+    // totals — dividing by full_rounds_counted, the same "full 18-hole
+    // rounds only" gate used everywhere else (matches Average Gross/Points
+    // above and the identical Average Rings/3-Putts-per-round stats already
+    // shipped on a player's own profile page).
+    const rounds = extremes.full_rounds_counted;
+    const perRound = (total) => (rounds > 0 ? Math.round((total / rounds) * 10) / 10 : null);
     perPlayer.push({
       player_id: playerId,
       name: nameById[playerId] || "Unknown player",
@@ -53,6 +60,10 @@ export async function GET() {
       pars: agg.pars,
       rings: agg.rings,
       three_putts: agg.three_putts,
+      avg_birdies: perRound(agg.birdies),
+      avg_pars: perRound(agg.pars),
+      avg_rings: perRound(agg.rings),
+      avg_three_putts: perRound(agg.three_putts),
     });
   });
 
@@ -79,7 +90,13 @@ export async function GET() {
       .filter(({ value }) => value !== null && value !== undefined && (!dropZero || value > 0))
       .sort((a, b) => (direction === "asc" ? a.value - b.value : b.value - a.value))
       .slice(0, TOP_N)
-      .map(({ row, value }) => ({ player_id: row.player_id, name: row.name, value, event_name: row.event_name }));
+      .map(({ row, value }) => ({
+        player_id: row.player_id,
+        name: row.name,
+        value,
+        event_name: row.event_name,
+        event_date: row.event_date,
+      }));
   }
 
   const roundExtremeRows = perPlayer.filter((p) => p.full_rounds_counted > 0);
@@ -102,36 +119,54 @@ export async function GET() {
     name: nameById[playerId],
     longest_drive: bonusTallies.longestDrive[playerId] || 0,
     closest_to_pin: bonusTallies.closestToPin[playerId] || 0,
+    tutu: bonusTallies.tutu[playerId] || 0,
   }));
 
   return NextResponse.json({
     lowest_gross: topN(
-      roundExtremeRows.map((p) => ({ ...p, event_name: p.lowest_gross?.event_name })),
+      roundExtremeRows.map((p) => ({
+        ...p,
+        event_name: p.lowest_gross?.event_name,
+        event_date: p.lowest_gross?.event_date,
+      })),
       (p) => p.lowest_gross?.value,
       "asc"
     ),
     highest_gross: topN(
-      roundExtremeRows.map((p) => ({ ...p, event_name: p.highest_gross?.event_name })),
+      roundExtremeRows.map((p) => ({
+        ...p,
+        event_name: p.highest_gross?.event_name,
+        event_date: p.highest_gross?.event_date,
+      })),
       (p) => p.highest_gross?.value,
       "desc"
     ),
     most_points: topN(
-      roundExtremeRows.map((p) => ({ ...p, event_name: p.most_points?.event_name })),
+      roundExtremeRows.map((p) => ({
+        ...p,
+        event_name: p.most_points?.event_name,
+        event_date: p.most_points?.event_date,
+      })),
       (p) => p.most_points?.value,
       "desc"
     ),
     lowest_points: topN(
-      roundExtremeRows.map((p) => ({ ...p, event_name: p.lowest_points?.event_name })),
+      roundExtremeRows.map((p) => ({
+        ...p,
+        event_name: p.lowest_points?.event_name,
+        event_date: p.lowest_points?.event_date,
+      })),
       (p) => p.lowest_points?.value,
       "asc",
       false // 0 points in a round is a real (if brutal) value, not "no data" — don't drop it
     ),
+    average_gross: topN(roundExtremeRows, (p) => p.average_gross, "asc"),
     rounds_100_plus: topN(perPlayer, (p) => p.rounds_100_plus, "desc"),
     eagles: topN(perPlayer, (p) => p.eagles, "desc"),
-    birdies: topN(perPlayer, (p) => p.birdies, "desc"),
-    pars: topN(perPlayer, (p) => p.pars, "desc"),
-    rings: topN(perPlayer, (p) => p.rings, "desc"),
-    three_putts: topN(perPlayer, (p) => p.three_putts, "desc"),
+    birdies: topN(roundExtremeRows, (p) => p.avg_birdies, "desc"),
+    pars: topN(roundExtremeRows, (p) => p.avg_pars, "desc"),
+    rings: topN(roundExtremeRows, (p) => p.avg_rings, "desc"),
+    three_putts: topN(roundExtremeRows, (p) => p.avg_three_putts, "desc"),
     individual_wins: topN(winRows, (p) => p.individual, "desc"),
     team_wins: topN(winRows, (p) => p.team, "desc"),
     top3_finishes: topN(finishRows, (p) => p.top3, "desc"),
@@ -139,5 +174,6 @@ export async function GET() {
     top10_finishes: topN(finishRows, (p) => p.top10, "desc"),
     longest_drives: topN(bonusRows, (p) => p.longest_drive, "desc"),
     closest_to_pins: topN(bonusRows, (p) => p.closest_to_pin, "desc"),
+    tutu: topN(bonusRows, (p) => p.tutu, "desc"),
   });
 }

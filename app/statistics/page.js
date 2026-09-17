@@ -19,6 +19,8 @@ import {
   Repeat2,
   ArrowUpRight,
   Crosshair,
+  Sigma,
+  Turtle,
 } from 'lucide-react';
 
 // Same categories as a player's own Round Stats section on their profile
@@ -27,27 +29,69 @@ import {
 // page be "based on these same stats." See app/players/[id]/page.js for the
 // per-player version and projects/golf-app/memory.md for the underlying
 // rules (rung holes, full-round gating, etc).
-const CATEGORIES = [
-  { key: 'lowest_gross', label: 'Lowest Gross', icon: TrendingDown, valueClass: 'text-fairway', showEvent: true },
-  { key: 'highest_gross', label: 'Highest Gross', icon: TrendingUp, valueClass: 'text-posgtext', showEvent: true },
-  { key: 'most_points', label: 'Highest Points', icon: Zap, valueClass: 'text-gold', showEvent: true },
-  { key: 'lowest_points', label: 'Lowest Points', icon: Frown, valueClass: 'text-posgtext', showEvent: true },
-  { key: 'rounds_100_plus', label: 'Most 100+ Gross Rounds', icon: ThumbsDown, valueClass: 'text-posgtext' },
-  { key: 'eagles', label: 'Most Eagles', icon: Star, valueClass: 'text-gold' },
-  { key: 'birdies', label: 'Most Birdies', icon: Bird, valueClass: 'text-posgtext' },
-  { key: 'pars', label: 'Most Pars', icon: Circle, valueClass: 'text-posgtext' },
-  { key: 'rings', label: 'Most Rings', icon: CircleSlash, valueClass: 'text-posgtext' },
-  { key: 'three_putts', label: 'Most 3 Putts', icon: Repeat2, valueClass: 'text-posgtext' },
-  { key: 'individual_wins', label: 'Most Individual Wins', icon: Award, valueClass: 'text-gold' },
-  { key: 'team_wins', label: 'Most Team Wins', icon: Users2, valueClass: 'text-gold' },
-  { key: 'longest_drives', label: 'Most Longest Drives', icon: ArrowUpRight, valueClass: 'text-posgtext' },
-  { key: 'closest_to_pins', label: 'Most Closest to the Pins', icon: Crosshair, valueClass: 'text-posgtext' },
-  { key: 'top3_finishes', label: 'Most Top 3 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
-  { key: 'top5_finishes', label: 'Most Top 5 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
-  { key: 'top10_finishes', label: 'Most Top 10 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
+//
+// Grouped into sections (Mike's ask, 2026-09-17: "order these or group them
+// ... maybe start with most team wins and all the top 3 5 10") rather than
+// one flat grid — each group renders as its own row with a thin divider
+// above it, so related leaderboards read together instead of in whatever
+// order the API happens to return them.
+const GROUPS = [
+  {
+    title: 'Wins & Finishes',
+    categories: [
+      { key: 'team_wins', label: 'Team Wins', icon: Users2, valueClass: 'text-gold' },
+      { key: 'individual_wins', label: 'Individual Wins', icon: Award, valueClass: 'text-gold' },
+      { key: 'top3_finishes', label: 'Top 3 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
+      { key: 'top5_finishes', label: 'Top 5 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
+      { key: 'top10_finishes', label: 'Top 10 Finishes', icon: ListOrdered, valueClass: 'text-posgtext' },
+    ],
+  },
+  {
+    title: 'All-Time Records',
+    categories: [
+      { key: 'lowest_gross', label: 'Lowest Gross Ever', icon: TrendingDown, valueClass: 'text-fairway', showEvent: true, showDate: true },
+      { key: 'highest_gross', label: 'Highest Gross Ever', icon: TrendingUp, valueClass: 'text-posgtext', showEvent: true, showDate: true },
+      { key: 'most_points', label: 'Highest Points Ever', icon: Zap, valueClass: 'text-gold', showEvent: true, showDate: true },
+      { key: 'lowest_points', label: 'Lowest Points Ever', icon: Frown, valueClass: 'text-posgtext', showEvent: true, showDate: true },
+    ],
+  },
+  {
+    title: 'Round Averages',
+    categories: [
+      { key: 'average_gross', label: 'Average Gross', icon: Sigma, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'birdies', label: 'Average Birdies Per Round', icon: Bird, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'pars', label: 'Average Pars Per Round', icon: Circle, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'rings', label: 'Average Rings Per Round', icon: CircleSlash, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'three_putts', label: 'Average 3-Putts Per Round', icon: Repeat2, valueClass: 'text-posgtext', decimals: 1 },
+    ],
+  },
+  {
+    title: 'Bonus Awards',
+    categories: [
+      { key: 'longest_drives', label: 'Longest Drives', icon: ArrowUpRight, valueClass: 'text-posgtext' },
+      { key: 'closest_to_pins', label: 'Closest to the Pin Awards', icon: Crosshair, valueClass: 'text-posgtext' },
+      { key: 'tutu', label: 'The Tutu', icon: Turtle, valueClass: 'text-posgtext' },
+    ],
+  },
+  {
+    title: 'Round Totals',
+    categories: [
+      { key: 'rounds_100_plus', label: '100+ Rounds', icon: ThumbsDown, valueClass: 'text-posgtext' },
+      { key: 'eagles', label: 'Eagles', icon: Star, valueClass: 'text-gold' },
+    ],
+  },
 ];
 
-function LeaderboardCard({ label, Icon, valueClass, rows, showEvent }) {
+function fmtDate(dateStr) {
+  if (!dateStr) return null;
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function LeaderboardCard({ label, Icon, valueClass, rows, showEvent, showDate, decimals }) {
   return (
     <div className="bg-posgcard rounded-xl border border-posgborder p-4">
       <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide mb-3">
@@ -57,24 +101,28 @@ function LeaderboardCard({ label, Icon, valueClass, rows, showEvent }) {
         <p className="text-posgmuted text-sm">No data yet.</p>
       ) : (
         <div className="space-y-2">
-          {rows.map((r, i) => (
-            <Link
-              key={r.player_id}
-              href={`/players/${r.player_id}`}
-              className="flex items-center justify-between hover:bg-posgcardhover rounded-md px-1.5 py-1 -mx-1.5 transition"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs text-posgmuted w-4 shrink-0">{i + 1}</span>
-                <div className="min-w-0">
-                  <div className="text-sm text-posgtext truncate">{r.name}</div>
-                  {showEvent && r.event_name && (
-                    <div className="text-[11px] text-posgmuted truncate">{r.event_name}</div>
-                  )}
+          {rows.map((r, i) => {
+            const date = showDate ? fmtDate(r.event_date) : null;
+            const subtitle = [showEvent ? r.event_name : null, date].filter(Boolean).join(' · ');
+            return (
+              <Link
+                key={r.player_id}
+                href={`/players/${r.player_id}`}
+                className="flex items-center justify-between hover:bg-posgcardhover rounded-md px-1.5 py-1 -mx-1.5 transition"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-posgmuted w-4 shrink-0">{i + 1}</span>
+                  <div className="min-w-0">
+                    <div className="text-sm text-posgtext truncate">{r.name}</div>
+                    {subtitle && <div className="text-[11px] text-posgmuted truncate">{subtitle}</div>}
+                  </div>
                 </div>
-              </div>
-              <div className={`font-mono font-semibold text-sm ${valueClass} shrink-0 ml-2`}>{r.value}</div>
-            </Link>
-          ))}
+                <div className={`font-mono font-semibold text-sm ${valueClass} shrink-0 ml-2`}>
+                  {decimals ? Number(r.value).toFixed(decimals) : r.value}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -112,16 +160,27 @@ export default function StatisticsPage() {
       {!data && !error && <p className="text-posgmuted">Loading…</p>}
 
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CATEGORIES.map((cat) => (
-            <LeaderboardCard
-              key={cat.key}
-              label={cat.label}
-              Icon={cat.icon}
-              valueClass={cat.valueClass}
-              rows={data[cat.key]}
-              showEvent={cat.showEvent}
-            />
+        <div className="space-y-8">
+          {GROUPS.map((group, i) => (
+            <div key={group.title} className={i > 0 ? 'border-t border-posgborder pt-8' : ''}>
+              <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+                {group.title}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {group.categories.map((cat) => (
+                  <LeaderboardCard
+                    key={cat.key}
+                    label={cat.label}
+                    Icon={cat.icon}
+                    valueClass={cat.valueClass}
+                    rows={data[cat.key]}
+                    showEvent={cat.showEvent}
+                    showDate={cat.showDate}
+                    decimals={cat.decimals}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
