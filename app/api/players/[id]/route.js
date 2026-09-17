@@ -73,7 +73,7 @@ export async function GET(request, { params }) {
     { data: oom },
     { data: qualification },
     { data: results },
-    { data: rounds },
+    { data: roundHandicaps },
     winners,
     eventPositions,
     matchRecord,
@@ -84,25 +84,35 @@ export async function GET(request, { params }) {
     supabase.from("qualification_status").select("*").eq("player_id", id).single(),
     supabase
       .from("event_results")
-      .select("points, longest_drive, closest_to_pin, events(id, name, event_type, event_date, sort_order)")
+      .select("points, longest_drive, closest_to_pin, tutu, events(id, name, event_type, event_date, sort_order)")
       .eq("player_id", id),
+    // The handicap actually locked in on the day, per event — same value the
+    // scorecard used for strokes/points at the time, not today's live
+    // player_handicaps figure (which may have moved since). See the
+    // "locked tour handicap" migration in projects/golf-app/memory.md.
     supabase
-      .from("player_rounds")
-      .select("*")
+      .from("scorecard_players")
+      .select("tour_handicap, scorecards!inner(event_id, status)")
       .eq("player_id", id)
-      .order("round_date", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false }),
+      .eq("scorecards.status", "completed"),
     getEventWinners(supabase),
     getEventPositions(supabase),
     getMatchRecord(supabase, id),
     fetchHoleRowsWithPar(supabase, id),
   ]);
 
+  const handicapByEvent = {};
+  (roundHandicaps || []).forEach((r) => {
+    handicapByEvent[r.scorecards.event_id] = r.tour_handicap;
+  });
+
   const wins = getPlayerWinCounts(winners, id);
   const playerHoleAgg = aggregateHoleStats(holeRows, parByHole).get(id) || {
     eagles: 0,
     birdies: 0,
     pars: 0,
+    bogeys: 0,
+    double_bogeys: 0,
     rings: 0,
     three_putts: 0,
     rounds: [],
@@ -112,13 +122,11 @@ export async function GET(request, { params }) {
     eagles: playerHoleAgg.eagles,
     birdies: playerHoleAgg.birdies,
     pars: playerHoleAgg.pars,
+    bogeys: playerHoleAgg.bogeys,
+    double_bogeys: playerHoleAgg.double_bogeys,
     rings: playerHoleAgg.rings,
     three_putts: playerHoleAgg.three_putts,
   };
-
-  // Mark the rounds that actually feed the handicap average — same "last 5,
-  // most recent first" rule the player_handicaps view uses.
-  const roundsWithFlag = (rounds || []).map((r, i) => ({ ...r, counts_toward_handicap: i < 5 }));
 
   // Uses the order_of_merit view's own position/movement (competition ranking,
   // ties share a position) rather than recomputing from array order.
@@ -136,6 +144,8 @@ export async function GET(request, { params }) {
       points: r.points,
       longest_drive: r.longest_drive,
       closest_to_pin: r.closest_to_pin,
+      tutu: r.tutu,
+      handicap: handicapByEvent[r.events?.id] ?? null,
       position: eventPositions?.[`${r.events?.id}|${id}`] ?? null,
       overall:
         (r.points || 0) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
@@ -165,7 +175,6 @@ export async function GET(request, { params }) {
     oom_movement: oomMovement,
     qualification: qualification || null,
     results_history: resultsHistory,
-    rounds: roundsWithFlag,
     wins: wins || { individual: 0, team: 0 },
     match_record: matchRecord || { wins: 0, losses: 0, halves: 0 },
     hole_stats: holeStats,

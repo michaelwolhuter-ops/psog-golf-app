@@ -30,7 +30,7 @@ import {
 const CATEGORIES = [
   { key: 'lowest_gross', label: 'Lowest Gross', icon: TrendingDown, valueClass: 'text-fairway', showEvent: true },
   { key: 'highest_gross', label: 'Highest Gross', icon: TrendingUp, valueClass: 'text-posgtext', showEvent: true },
-  { key: 'most_points', label: 'Most Points', icon: Zap, valueClass: 'text-gold', showEvent: true },
+  { key: 'most_points', label: 'Highest Points', icon: Zap, valueClass: 'text-gold', showEvent: true },
   { key: 'lowest_points', label: 'Lowest Points', icon: Frown, valueClass: 'text-posgtext', showEvent: true },
   { key: 'rounds_100_plus', label: 'Most 100+ Gross Rounds', icon: ThumbsDown, valueClass: 'text-posgtext' },
   { key: 'eagles', label: 'Most Eagles', icon: Star, valueClass: 'text-gold' },

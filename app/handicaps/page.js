@@ -10,8 +10,8 @@ function fmt(n) {
 }
 
 // Tour Handicap column specifically shows the rounded whole number — same
-// rule strokesReceived() uses on the course. Index/Prediction/Avg/
-// Differential stay as decimals via fmt() above, since those are inputs.
+// rule strokesReceived() uses on the course. Index/Prediction stay as
+// decimals via fmt() above, since those are inputs.
 function fmtHcp(n) {
   const r = roundHandicapForStrokes(n);
   return r === null ? '—' : String(r);
@@ -37,9 +37,8 @@ export default function HandicapsPage() {
         <h1 className="text-2xl font-bold text-posgtext">Handicaps</h1>
       </div>
       <p className="text-posgmuted mb-6">
-        Tour handicap = average of (Index or committee Prediction, Differential) + Committee
-        Adjustment. Differential = average of your last 5 rounds − 72. Updates automatically
-        as rounds are logged; Committee Adjustment is set manually at any time.
+        Tour handicap = Index (or Committee Handicap if no Index yet) + Committee Adjustment.
+        Both are set manually and the total updates as soon as either changes.
       </p>
 
       {error && <p className="text-red-400">{error}</p>}
@@ -53,8 +52,6 @@ export default function HandicapsPage() {
                 <th className="px-4 py-3">Player</th>
                 <th className="px-4 py-3 text-right">Index</th>
                 <th className="px-4 py-3 text-right">Prediction</th>
-                <th className="px-4 py-3 text-right">Avg (last 5)</th>
-                <th className="px-4 py-3 text-right">Differential</th>
                 <th className="px-4 py-3 text-right">Committee Adj</th>
                 <th className="px-4 py-3 text-right">Tour Handicap</th>
               </tr>
@@ -70,8 +67,6 @@ export default function HandicapsPage() {
                   <td className="px-4 py-3 text-right font-mono text-posgmuted">
                     {fmt(r.handicap_prediction)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">{fmt(r.avg_score)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">{fmt(r.differential)}</td>
                   <td className="px-4 py-3 text-right font-mono text-posgmuted">
                     {r.committee_adjustment > 0 ? '+' : ''}
                     {r.committee_adjustment}

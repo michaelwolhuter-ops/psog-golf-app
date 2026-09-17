@@ -10,14 +10,11 @@ import {
   Target,
   Flag,
   Gauge,
-  Activity,
   Award,
   ArrowUpRight,
   Crosshair,
-  CheckCircle2,
   Pencil,
   Trash2,
-  Plus,
   Check,
   X,
   Swords,
@@ -33,6 +30,11 @@ import {
   ThumbsDown,
   Repeat2,
   CircleSlash,
+  Turtle,
+  Sigma,
+  Divide,
+  CircleMinus,
+  XCircle,
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
 import { useAdmin } from '@/lib/AdminContext';
@@ -46,14 +48,12 @@ function fmt(n) {
 // Tour Handicap specifically shows the rounded whole number, not the raw
 // decimal — same rounding rule strokesReceived() actually uses on the
 // course, so what's displayed here never disagrees with what a player
-// actually gets on a hole. Index/Prediction/Differential stay as decimals
-// via fmt() above — those are inputs, not the number driving strokes.
+// actually gets on a hole. Index/Prediction stay as decimals via fmt()
+// above — those are inputs, not the number driving strokes.
 function fmtHcp(n) {
   const r = roundHandicapForStrokes(n);
   return r === null ? '—' : String(r);
 }
-
-const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
 
 export default function PlayerProfilePage() {
   const { id } = useParams();
@@ -73,18 +73,14 @@ export default function PlayerProfilePage() {
   const [saveError, setSaveError] = useState('');
 
   // Index is a player-facing field, not an admin one — it lives outside the
-  // Edit panel above and is always editable in place. Unlike Average Round
-  // Index and Tour Handicap (both calculated, never typed in), Index comes
-  // from the player's own handicap subscription app, so this app has no way
-  // to know when it changes — the player has to keep it updated by hand.
+  // Edit panel above and is always editable in place. Unlike Tour Handicap
+  // (calculated, never typed in), Index comes from the player's own
+  // handicap subscription app, so this app has no way to know when it
+  // changes — the player has to keep it updated by hand.
   const [indexEditing, setIndexEditing] = useState(false);
   const [indexValue, setIndexValue] = useState('');
   const [savingIndex, setSavingIndex] = useState(false);
   const [indexError, setIndexError] = useState('');
-
-  const [roundScore, setRoundScore] = useState('');
-  const [roundDate, setRoundDate] = useState('');
-  const [addingRound, setAddingRound] = useState(false);
 
   function load() {
     fetch(`/api/players/${id}`, { cache: 'no-store' })
@@ -145,30 +141,10 @@ export default function PlayerProfilePage() {
     load();
   }
 
-  async function addRound(e) {
-    e.preventDefault();
-    if (!roundScore) return;
-    setAddingRound(true);
-    await fetch(`/api/players/${id}/rounds`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score: roundScore, round_date: roundDate || null }),
-    });
-    setAddingRound(false);
-    setRoundScore('');
-    setRoundDate('');
-    load();
-  }
-
-  async function deleteRound(roundId) {
-    await fetch(`/api/rounds/${roundId}`, { method: 'DELETE' });
-    load();
-  }
-
   async function deletePlayer() {
     if (
       !(await confirm(
-        `Delete ${player.name}? This also removes their rounds, results and history. This can't be undone.`,
+        `Delete ${player.name}? This also removes their results and history. This can't be undone.`,
         { confirmLabel: 'Delete player' }
       ))
     ) {
@@ -198,7 +174,6 @@ export default function PlayerProfilePage() {
     oom_total_points,
     qualification,
     results_history,
-    rounds,
     wins,
     match_record,
     hole_stats,
@@ -214,6 +189,18 @@ export default function PlayerProfilePage() {
   // closest_to_pin per event) — no separate query needed.
   const longestDriveCount = results_history.filter((r) => r.longest_drive).length;
   const closestToPinCount = results_history.filter((r) => r.closest_to_pin).length;
+  const tutuCount = results_history.filter((r) => r.tutu).length;
+
+  const finishedPositions = results_history.filter((r) => r.position != null).map((r) => r.position);
+  const avgFinish =
+    finishedPositions.length > 0
+      ? finishedPositions.reduce((sum, p) => sum + p, 0) / finishedPositions.length
+      : null;
+
+  const fullRoundsCounted = hole_stats?.full_rounds_counted || 0;
+  const avgRingsPerRound = fullRoundsCounted > 0 ? (hole_stats.rings || 0) / fullRoundsCounted : null;
+  const avgThreePuttsPerRound =
+    fullRoundsCounted > 0 ? (hole_stats.three_putts || 0) / fullRoundsCounted : null;
 
   return (
     <div>
@@ -338,7 +325,7 @@ export default function PlayerProfilePage() {
 
       {/* ================= Section 1: player info & stats ================= */}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-9 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Target size={13} /> Tour Handicap
@@ -346,6 +333,60 @@ export default function PlayerProfilePage() {
           <div className="text-2xl font-bold text-gold mt-1">
             {fmtHcp(handicap?.tour_handicap)}
           </div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+              <Gauge size={13} /> {hasIndex ? 'Index' : 'Committee Handicap'}
+            </div>
+            {hasIndex && !indexEditing && (
+              <button
+                onClick={() => {
+                  setIndexValue(player.index ?? '');
+                  setIndexError('');
+                  setIndexEditing(true);
+                }}
+                className="text-posgmuted hover:text-posgtext"
+                title="Edit index"
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
+          {hasIndex && indexEditing ? (
+            <form onSubmit={saveIndex} className="mt-1.5 flex items-center gap-1.5">
+              <input
+                type="number"
+                step="0.1"
+                autoFocus
+                value={indexValue}
+                onChange={(e) => setIndexValue(e.target.value)}
+                placeholder="none"
+                className="w-20 bg-posgbg border border-posgborder rounded-md px-2 py-1 text-sm text-posgtext"
+              />
+              <button
+                type="submit"
+                disabled={savingIndex}
+                className="text-fairway hover:opacity-80 disabled:opacity-50"
+                title="Save"
+              >
+                <Check size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIndexEditing(false)}
+                className="text-posgmuted hover:text-red-400"
+                title="Cancel"
+              >
+                <X size={16} />
+              </button>
+            </form>
+          ) : (
+            <div className="text-2xl font-bold text-posgtext mt-1">
+              {hasIndex ? fmt(player.index) : fmt(player.handicap_prediction)}
+            </div>
+          )}
+          {indexError && <p className="text-red-400 text-xs mt-1">{indexError}</p>}
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="text-xs text-posgmuted uppercase tracking-wide">Committee Adj</div>
@@ -376,6 +417,16 @@ export default function PlayerProfilePage() {
             </div>
           )}
         </div>
+      </div>
+
+      <h2 className="text-lg font-semibold text-posgtext mb-2">Stats</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Users2 size={13} /> Team Wins
+          </div>
+          <div className="text-2xl font-bold text-gold mt-1">{wins?.team || 0}</div>
+        </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Award size={13} /> Individual Wins
@@ -384,9 +435,12 @@ export default function PlayerProfilePage() {
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Users2 size={13} /> Team Wins
+            <Swords size={13} /> Match Record
           </div>
-          <div className="text-2xl font-bold text-gold mt-1">{wins?.team || 0}</div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
+          </div>
+          <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
@@ -400,25 +454,6 @@ export default function PlayerProfilePage() {
           </div>
           <div className="text-2xl font-bold text-posgtext mt-1">{closestToPinCount}</div>
         </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Swords size={13} /> Match Record
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
-          </div>
-          <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
-        </div>
-      </div>
-
-      {isAdmin && (
-      <p className="text-xs text-posgmuted mb-3">
-        {hole_stats?.full_rounds_counted
-          ? `From ${hole_stats.full_rounds_counted} full 18-hole round${hole_stats.full_rounds_counted === 1 ? '' : 's'} played (rounds ended early by match play aren’t compared here). Eagles/Birdies/Pars/Rings/3 Putts count every hole played, including unfinished rounds.`
-          : 'No full 18-hole rounds recorded yet via the digital scorecard.'}
-      </p>
-      )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <TrendingDown size={13} /> Lowest Gross
@@ -443,7 +478,21 @@ export default function PlayerProfilePage() {
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Zap size={13} /> Most Points
+            <Sigma size={13} /> Average Gross
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {hole_stats?.average_gross != null ? hole_stats.average_gross.toFixed(1) : '—'}
+          </div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ThumbsDown size={13} /> 100+ Gross Rounds
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rounds_100_plus ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Zap size={13} /> Highest Points
           </div>
           <div className="text-2xl font-bold text-gold mt-1">
             {hole_stats?.most_points ? hole_stats.most_points.value : '—'}
@@ -465,9 +514,11 @@ export default function PlayerProfilePage() {
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ThumbsDown size={13} /> 100+ Gross Rounds
+            <Divide size={13} /> Average Points
           </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rounds_100_plus ?? 0}</div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {hole_stats?.average_points != null ? hole_stats.average_points.toFixed(1) : '—'}
+          </div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
@@ -489,15 +540,51 @@ export default function PlayerProfilePage() {
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <CircleMinus size={13} /> Bogeys
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.bogeys ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <XCircle size={13} /> Double Bogeys
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.double_bogeys ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <CircleSlash size={13} /> Rings
           </div>
           <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rings ?? 0}</div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Sigma size={13} /> Average Rings/Round
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {avgRingsPerRound != null ? avgRingsPerRound.toFixed(1) : '—'}
+          </div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
             <Repeat2 size={13} /> 3 Putts
           </div>
           <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.three_putts ?? 0}</div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Sigma size={13} /> Average 3 Putts/Round
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {avgThreePuttsPerRound != null ? avgThreePuttsPerRound.toFixed(1) : '—'}
+          </div>
+        </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <ListOrdered size={13} /> Average Finish
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">
+            {avgFinish != null ? avgFinish.toFixed(1) : '—'}
+          </div>
         </div>
         <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
@@ -517,6 +604,12 @@ export default function PlayerProfilePage() {
           </div>
           <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top10 ?? 0}</div>
         </div>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+            <Turtle size={13} /> The Tutu
+          </div>
+          <div className="text-2xl font-bold text-posgtext mt-1">{tutuCount}</div>
+        </div>
       </div>
 
       <h2 className="text-lg font-semibold text-posgtext mb-2">Results History</h2>
@@ -527,13 +620,13 @@ export default function PlayerProfilePage() {
           <table className="w-full text-sm">
             <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
               <tr>
-                <th className="px-4 py-3 w-12">Pos</th>
                 <th className="px-4 py-3">Event</th>
-                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3 text-right">HCP</th>
                 <th className="px-4 py-3 text-right">Points</th>
                 <th className="px-4 py-3 text-center">LD</th>
                 <th className="px-4 py-3 text-center">CTP</th>
                 <th className="px-4 py-3 text-right">Overall</th>
+                <th className="px-4 py-3 text-right">Pos</th>
               </tr>
             </thead>
             <tbody>
@@ -542,194 +635,27 @@ export default function PlayerProfilePage() {
                   key={r.event_id}
                   className="border-b border-posgborder last:border-0 hover:bg-posgcardhover"
                 >
-                  <td className="px-4 py-3 font-bold text-posgtext">{r.position ?? '—'}</td>
-                  <td className="px-4 py-3 text-posgtext">{r.event_name}</td>
-                  <td className="px-4 py-3 text-posgmuted">{typeLabel[r.event_type] || r.event_type}</td>
-                  <td className="px-4 py-3 text-right font-mono text-posgmuted">{r.points ?? '—'}</td>
-                  <td className="px-4 py-3 text-center">
-                    {r.longest_drive && <CheckCircle2 size={14} className="inline text-gold" />}
+                  <td className="px-4 py-3 text-posgtext font-medium">{r.event_name}</td>
+                  <td className="px-4 py-3 text-right font-mono text-posgmuted">
+                    {r.handicap != null ? fmtHcp(r.handicap) : '—'}
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    {r.closest_to_pin && <CheckCircle2 size={14} className="inline text-gold" />}
+                  <td className="px-4 py-3 text-right font-mono text-posgmuted">{r.points ?? '—'}</td>
+                  <td className="px-4 py-3 text-center font-mono">
+                    {r.longest_drive ? <span className="text-fairway font-semibold">+2</span> : <span className="text-posgmuted">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center font-mono">
+                    {r.closest_to_pin ? <span className="text-fairway font-semibold">+2</span> : <span className="text-posgmuted">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold text-posgtext">
                     {r.overall}
                   </td>
+                  <td className="px-4 py-3 text-right font-bold text-gold">{r.position ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
-      {/* ================= Section 2: handicap ================= */}
-
-      <div className="border-t-2 border-fairway/40 pt-10">
-        <h2 className="text-2xl font-extrabold text-posgtext mb-1 tracking-tight">Handicap</h2>
-        <p className="text-xs text-posgmuted mb-4">
-          Index comes from your handicap subscription app — update it here whenever it
-          changes. Players without an official Index yet use a Committee Handicap set by
-          the committee instead. Average Round Index and Tour Handicap are always
-          calculated from your rounds below, never typed in directly.
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-                <Gauge size={13} /> {hasIndex ? 'Index' : 'Committee Handicap'}
-              </div>
-              {hasIndex && !indexEditing && (
-                <button
-                  onClick={() => {
-                    setIndexValue(player.index ?? '');
-                    setIndexError('');
-                    setIndexEditing(true);
-                  }}
-                  className="text-posgmuted hover:text-posgtext"
-                  title="Edit index"
-                >
-                  <Pencil size={12} />
-                </button>
-              )}
-            </div>
-            {hasIndex && indexEditing ? (
-              <form onSubmit={saveIndex} className="mt-1.5 flex items-center gap-1.5">
-                <input
-                  type="number"
-                  step="0.1"
-                  autoFocus
-                  value={indexValue}
-                  onChange={(e) => setIndexValue(e.target.value)}
-                  placeholder="none"
-                  className="w-20 bg-posgbg border border-posgborder rounded-md px-2 py-1 text-sm text-posgtext"
-                />
-                <button
-                  type="submit"
-                  disabled={savingIndex}
-                  className="text-fairway hover:opacity-80 disabled:opacity-50"
-                  title="Save"
-                >
-                  <Check size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIndexEditing(false)}
-                  className="text-posgmuted hover:text-red-400"
-                  title="Cancel"
-                >
-                  <X size={16} />
-                </button>
-              </form>
-            ) : (
-              <div className="text-2xl font-bold text-posgtext mt-1">
-                {hasIndex ? fmt(player.index) : fmt(player.handicap_prediction)}
-              </div>
-            )}
-            {indexError && <p className="text-red-400 text-xs mt-1">{indexError}</p>}
-            {!hasIndex && (
-              <p className="text-[11px] text-posgmuted mt-1">
-                No official Index yet — set by the committee via Edit profile.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-            <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-              <Activity size={13} /> Average Round Index
-            </div>
-            <div className="text-2xl font-bold text-posgtext mt-1">{fmt(handicap?.differential)}</div>
-            <p className="text-[11px] text-posgmuted mt-1">From your rounds below — add or delete a round to update it.</p>
-          </div>
-
-          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-            <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-              <Target size={13} /> Tour Handicap
-            </div>
-            <div className="text-2xl font-bold text-gold mt-1">{fmtHcp(handicap?.tour_handicap)}</div>
-            <p className="text-[11px] text-posgmuted mt-1">(Index or Committee Handicap + Average Round Index) ÷ 2, plus Committee Adjustment.</p>
-          </div>
-        </div>
-
-        <h3 className="text-lg font-semibold text-posgtext mb-2">Rounds (for handicap)</h3>
-        <p className="text-xs text-posgmuted mb-3">
-          The 5 most recent rounds shown here are averaged into the Average Round Index above.
-          Older rounds stay on record but stop counting once newer ones are added.
-        </p>
-        <div className="bg-posgcard rounded-xl border border-posgborder overflow-x-auto mb-3">
-          <table className="w-full text-sm">
-            <thead className="text-left text-posgmuted uppercase text-xs tracking-wide border-b border-posgborder">
-              <tr>
-                <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2 text-right">Score</th>
-                <th className="px-4 py-2 text-center">Counts</th>
-                <th className="px-4 py-2 w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(!rounds || rounds.length === 0) && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-3 text-posgmuted text-sm">
-                    No rounds logged yet.
-                  </td>
-                </tr>
-              )}
-              {rounds &&
-                rounds.map((r) => (
-                  <tr key={r.id} className="border-b border-posgborder last:border-0">
-                    <td className="px-4 py-2 text-posgmuted">{r.round_date || 'no date'}</td>
-                    <td className="px-4 py-2 text-right font-mono text-posgtext">{r.score}</td>
-                    <td className="px-4 py-2 text-center">
-                      {r.counts_toward_handicap ? (
-                        <CheckCircle2 size={14} className="inline text-fairway" />
-                      ) : (
-                        <span className="text-posgmuted text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <button
-                        onClick={() => deleteRound(r.id)}
-                        className="text-posgmuted hover:text-red-400"
-                        title="Delete round"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-
-        <form onSubmit={addRound} className="flex flex-wrap items-end gap-3 mb-4">
-          <div>
-            <label className="block text-xs text-posgmuted mb-1">Score</label>
-            <input
-              type="number"
-              value={roundScore}
-              onChange={(e) => setRoundScore(e.target.value)}
-              className="w-24 bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-              placeholder="e.g. 88"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-posgmuted mb-1">Date (optional)</label>
-            <input
-              type="date"
-              value={roundDate}
-              onChange={(e) => setRoundDate(e.target.value)}
-              className="bg-posgbg border border-posgborder rounded-md px-3 py-1.5 text-sm text-posgtext"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={addingRound || !roundScore}
-            className="inline-flex items-center gap-1.5 bg-fairway text-black font-medium px-3 py-1.5 rounded-md text-sm disabled:opacity-50"
-          >
-            <Plus size={14} /> {addingRound ? 'Adding…' : 'Add round'}
-          </button>
-        </form>
-      </div>
     </div>
   );
 }

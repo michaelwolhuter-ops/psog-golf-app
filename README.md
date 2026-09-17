@@ -26,4 +26,4 @@ No score entry yet, no live match view, no format-specific logic (better ball / 
 
 - All player, event, and result data was seeded from `POSG Tour.xlsx` (the live current-season workbook), not `POSG Handicaps.xlsx` (an earlier blank template).
 - One name was corrected during import: "Darrn O" → "Darren O" (a typo in one tab — the other two tabs already had it spelled correctly). Trailing spaces on a couple of names were also trimmed.
-- Tour Handicap formula: average of (Index or committee Prediction, Differential) + Committee Adjustment, where Differential = average of your last 5 logged rounds − 72. This matches the actual Excel formula, not the slightly different verbal description ("add them together") — the sheet's formula is an average, not a sum.
+- Tour Handicap formula (changed 2026-09-17): Index (or Committee Handicap if the player has no official Index) + Committee Adjustment. No longer averaged with a rounds-based differential — the rounds-logging feature was removed.
