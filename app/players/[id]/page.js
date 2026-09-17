@@ -201,6 +201,11 @@ export default function PlayerProfilePage() {
   const avgRingsPerRound = fullRoundsCounted > 0 ? (hole_stats.rings || 0) / fullRoundsCounted : null;
   const avgThreePuttsPerRound =
     fullRoundsCounted > 0 ? (hole_stats.three_putts || 0) / fullRoundsCounted : null;
+  const avgBirdiesPerRound = fullRoundsCounted > 0 ? (hole_stats.birdies || 0) / fullRoundsCounted : null;
+  const avgParsPerRound = fullRoundsCounted > 0 ? (hole_stats.pars || 0) / fullRoundsCounted : null;
+  const avgBogeysPerRound = fullRoundsCounted > 0 ? (hole_stats.bogeys || 0) / fullRoundsCounted : null;
+  const avgDoubleBogeysPerRound =
+    fullRoundsCounted > 0 ? (hole_stats.double_bogeys || 0) / fullRoundsCounted : null;
 
   return (
     <div>
@@ -419,196 +424,249 @@ export default function PlayerProfilePage() {
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold text-posgtext mb-2">Stats</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Users2 size={13} /> Team Wins
-          </div>
-          <div className="text-2xl font-bold text-gold mt-1">{wins?.team || 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Award size={13} /> Individual Wins
-          </div>
-          <div className="text-2xl font-bold text-gold mt-1">{wins?.individual || 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Swords size={13} /> Match Record
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
-          </div>
-          <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ArrowUpRight size={13} /> Longest Drive
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{longestDriveCount}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Crosshair size={13} /> Closest to the Pin
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{closestToPinCount}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <TrendingDown size={13} /> Lowest Gross
-          </div>
-          <div className="text-2xl font-bold text-fairway mt-1">
-            {hole_stats?.lowest_gross ? hole_stats.lowest_gross.value : '—'}
-          </div>
-          {hole_stats?.lowest_gross && (
-            <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_gross.event_name}</div>
-          )}
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <TrendingUp size={13} /> Highest Gross
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {hole_stats?.highest_gross ? hole_stats.highest_gross.value : '—'}
-          </div>
-          {hole_stats?.highest_gross && (
-            <div className="text-xs text-posgmuted truncate">{hole_stats.highest_gross.event_name}</div>
-          )}
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Sigma size={13} /> Average Gross
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {hole_stats?.average_gross != null ? hole_stats.average_gross.toFixed(1) : '—'}
+      <h2 className="text-lg font-semibold text-posgtext mb-4">Stats</h2>
+      <div className="space-y-8 mb-8">
+        <div>
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+            Wins &amp; Finishes
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Users2 size={13} /> Team Wins
+              </div>
+              <div className="text-2xl font-bold text-gold mt-1">{wins?.team || 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Award size={13} /> Individual Wins
+              </div>
+              <div className="text-2xl font-bold text-gold mt-1">{wins?.individual || 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Swords size={13} /> Match Record
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {match_record?.wins || 0}-{match_record?.losses || 0}-{match_record?.halves || 0}
+              </div>
+              <div className="text-xs text-posgmuted">Better Ball Match Play only</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ListOrdered size={13} /> Average Finish
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgFinish != null ? avgFinish.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ListOrdered size={13} /> Top 3 Finishes
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top3 ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ListOrdered size={13} /> Top 5 Finishes
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top5 ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ListOrdered size={13} /> Top 10 Finishes
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top10 ?? 0}</div>
+            </div>
           </div>
         </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ThumbsDown size={13} /> 100+ Gross Rounds
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rounds_100_plus ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Zap size={13} /> Highest Points
-          </div>
-          <div className="text-2xl font-bold text-gold mt-1">
-            {hole_stats?.most_points ? hole_stats.most_points.value : '—'}
-          </div>
-          {hole_stats?.most_points && (
-            <div className="text-xs text-posgmuted truncate">{hole_stats.most_points.event_name}</div>
-          )}
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Frown size={13} /> Lowest Points
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {hole_stats?.lowest_points ? hole_stats.lowest_points.value : '—'}
-          </div>
-          {hole_stats?.lowest_points && (
-            <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_points.event_name}</div>
-          )}
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Divide size={13} /> Average Points
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {hole_stats?.average_points != null ? hole_stats.average_points.toFixed(1) : '—'}
-          </div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Star size={13} /> Eagles
-          </div>
-          <div className="text-2xl font-bold text-gold mt-1">{hole_stats?.eagles ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Bird size={13} /> Birdies
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.birdies ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Circle size={13} /> Pars
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.pars ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <CircleMinus size={13} /> Bogeys
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.bogeys ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <XCircle size={13} /> Double Bogeys
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.double_bogeys ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <CircleSlash size={13} /> Rings
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rings ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Sigma size={13} /> Average Rings/Round
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {avgRingsPerRound != null ? avgRingsPerRound.toFixed(1) : '—'}
+
+        <div className="border-t border-posgborder pt-8">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+            Personal Bests
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <TrendingDown size={13} /> Lowest Gross
+              </div>
+              <div className="text-2xl font-bold text-fairway mt-1">
+                {hole_stats?.lowest_gross ? hole_stats.lowest_gross.value : '—'}
+              </div>
+              {hole_stats?.lowest_gross && (
+                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_gross.event_name}</div>
+              )}
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <TrendingUp size={13} /> Highest Gross
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {hole_stats?.highest_gross ? hole_stats.highest_gross.value : '—'}
+              </div>
+              {hole_stats?.highest_gross && (
+                <div className="text-xs text-posgmuted truncate">{hole_stats.highest_gross.event_name}</div>
+              )}
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Zap size={13} /> Highest Points
+              </div>
+              <div className="text-2xl font-bold text-gold mt-1">
+                {hole_stats?.most_points ? hole_stats.most_points.value : '—'}
+              </div>
+              {hole_stats?.most_points && (
+                <div className="text-xs text-posgmuted truncate">{hole_stats.most_points.event_name}</div>
+              )}
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Frown size={13} /> Lowest Points
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {hole_stats?.lowest_points ? hole_stats.lowest_points.value : '—'}
+              </div>
+              {hole_stats?.lowest_points && (
+                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_points.event_name}</div>
+              )}
+            </div>
           </div>
         </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Repeat2 size={13} /> 3 Putts
+
+        <div className="border-t border-posgborder pt-8">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+            Round Averages
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Sigma size={13} /> Average Gross
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {hole_stats?.average_gross != null ? hole_stats.average_gross.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Divide size={13} /> Average Points
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {hole_stats?.average_points != null ? hole_stats.average_points.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Sigma size={13} /> Average Birdies/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgBirdiesPerRound != null ? avgBirdiesPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Circle size={13} /> Average Pars/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgParsPerRound != null ? avgParsPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <CircleMinus size={13} /> Average Bogeys/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgBogeysPerRound != null ? avgBogeysPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <XCircle size={13} /> Average Double Bogeys/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgDoubleBogeysPerRound != null ? avgDoubleBogeysPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Sigma size={13} /> Average Rings/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgRingsPerRound != null ? avgRingsPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Sigma size={13} /> Average 3 Putts/Round
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">
+                {avgThreePuttsPerRound != null ? avgThreePuttsPerRound.toFixed(1) : '—'}
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.three_putts ?? 0}</div>
         </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Sigma size={13} /> Average 3 Putts/Round
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {avgThreePuttsPerRound != null ? avgThreePuttsPerRound.toFixed(1) : '—'}
+
+        <div className="border-t border-posgborder pt-8">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+            Bonus Awards
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ArrowUpRight size={13} /> Longest Drive
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{longestDriveCount}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Crosshair size={13} /> Closest to the Pin
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{closestToPinCount}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Turtle size={13} /> The Tutu
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{tutuCount}</div>
+            </div>
           </div>
         </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ListOrdered size={13} /> Average Finish
+
+        <div className="border-t border-posgborder pt-8">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-widest mb-3">
+            Round Totals
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <ThumbsDown size={13} /> 100+ Gross Rounds
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rounds_100_plus ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Star size={13} /> Eagles
+              </div>
+              <div className="text-2xl font-bold text-gold mt-1">{hole_stats?.eagles ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Bird size={13} /> Birdies
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.birdies ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <CircleSlash size={13} /> Rings
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.rings ?? 0}</div>
+            </div>
+            <div className="bg-posgcard rounded-xl border border-posgborder p-4">
+              <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
+                <Repeat2 size={13} /> 3 Putts
+              </div>
+              <div className="text-2xl font-bold text-posgtext mt-1">{hole_stats?.three_putts ?? 0}</div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">
-            {avgFinish != null ? avgFinish.toFixed(1) : '—'}
-          </div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ListOrdered size={13} /> Top 3 Finishes
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top3 ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ListOrdered size={13} /> Top 5 Finishes
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top5 ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <ListOrdered size={13} /> Top 10 Finishes
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{top_finishes?.top10 ?? 0}</div>
-        </div>
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
-          <div className="flex items-center gap-1.5 text-xs text-posgmuted uppercase tracking-wide">
-            <Turtle size={13} /> The Tutu
-          </div>
-          <div className="text-2xl font-bold text-posgtext mt-1">{tutuCount}</div>
         </div>
       </div>
 
