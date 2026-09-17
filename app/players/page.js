@@ -58,7 +58,7 @@ export default function PlayersPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
         <div className="flex items-center gap-2">
           <Users size={22} className="text-fairway" />
           <h1 className="text-2xl font-bold text-posgtext">Players</h1>
@@ -72,11 +72,6 @@ export default function PlayersPage() {
           </button>
         )}
       </div>
-      {isAdmin && (
-      <p className="text-posgmuted mb-6">
-        One row per person — this is the canonical list everything else links to.
-      </p>
-      )}
 
       {isAdmin && formOpen && (
         <form
@@ -171,11 +166,6 @@ export default function PlayersPage() {
           ))}
         </div>
       )}
-
-      <p className="text-xs text-posgmuted mt-4">
-        Click a player to open their profile — handicap breakdown, order of merit position,
-        and full results history.
-      </p>
     </div>
   );
 }

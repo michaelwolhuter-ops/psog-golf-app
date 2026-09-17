@@ -134,8 +134,7 @@ export default function ScorecardsSection({ eventId }) {
       </h2>
       {isAdmin && (
       <p className="text-xs text-posgmuted mb-3">
-        Every digital scorecard entered for this event, hole by hole. Individual results below feed
-        Order of Merit once a round is finished.
+        Individual results below feed Order of Merit once a round is finished.
       </p>
       )}
       {scorecards.map((sc) => (

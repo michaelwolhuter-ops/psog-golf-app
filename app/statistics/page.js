@@ -104,10 +104,8 @@ export default function StatisticsPage() {
         <h1 className="text-2xl font-bold text-posgtext">Statistics</h1>
       </div>
       <p className="text-posgmuted mb-6 text-sm">
-        Whole-field leaderboards built from real scorecard data. Lowest/Highest Gross and
-        Most/Lowest Points only count full 18-hole rounds. Eagles/Birdies/Pars exclude
-        picked-up (rung) holes — they were never actually holed out at that score. Rings
-        counts the pickups themselves. Click a name to open that player&apos;s profile.
+        Lowest/Highest Gross and Points only count full 18-hole rounds. Eagles/Birdies/Pars
+        exclude picked-up (rung) holes; Rings counts the pickups themselves.
       </p>
 
       {error && <p className="text-red-400 mb-4">{error}</p>}

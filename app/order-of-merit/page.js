@@ -83,15 +83,10 @@ export default function OrderOfMeritPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-6">
         <Trophy size={22} className="text-gold" />
         <h1 className="text-2xl font-bold text-posgtext">Order of Merit</h1>
       </div>
-      <p className="text-posgmuted mb-6 max-w-2xl">
-        Season standings — highest points at the top. Each round&apos;s score sits in
-        small print under a player&apos;s name once it&apos;s entered and completed; the big
-        number on the right is what actually decides the ranking.
-      </p>
 
       {error && <p className="text-red-400">{error}</p>}
       {!rows && !error && <p className="text-posgmuted">Loading…</p>}
