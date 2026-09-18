@@ -123,7 +123,6 @@ export default function EventDetailPage() {
             points: r ? r.points : '',
             longest_drive: r ? r.longest_drive : false,
             closest_to_pin: r ? r.closest_to_pin : false,
-            countback_win: r ? r.countback_win : false,
             tutu: r ? r.tutu : false,
           };
         });
@@ -180,13 +179,15 @@ export default function EventDetailPage() {
     setMeta((m) => ({ ...m, course_id: courseId, golf_course: course ? course.name : m.golf_course }));
   }
 
-  // Countback, Longest Drive and Closest to the Pin all save themselves
-  // immediately on click, rather than waiting for the batch "Save results"
-  // button — these are quick tick-and-move-on calls made while walking the
-  // table, and it's easy to tick one then get pulled away before hitting
-  // Save, silently losing it (this is exactly what happened with countback).
-  // Points stays batch-only, since that's typed entry across the whole
-  // table that naturally ends with one deliberate "Save results" click.
+  // Longest Drive and Closest to the Pin save themselves immediately on
+  // click, rather than waiting for the batch "Save results" button — these
+  // are quick tick-and-move-on calls made while walking the table, and it's
+  // easy to tick one then get pulled away before hitting Save, silently
+  // losing it. Points stays batch-only, since that's typed entry across the
+  // whole table that naturally ends with one deliberate "Save results"
+  // click. (Countback used to live here too, as a manual tick — replaced
+  // 2026-09-18 by automatic countback off the real scorecard, see
+  // lib/countback.js, so there's nothing left to save by hand.)
   async function saveResultField(playerId, field, value) {
     setField(playerId, field, value);
     const v = form[playerId] || {};
@@ -206,7 +207,6 @@ export default function EventDetailPage() {
             points: v.points,
             longest_drive: field === 'longest_drive' ? value : v.longest_drive,
             closest_to_pin: field === 'closest_to_pin' ? value : v.closest_to_pin,
-            countback_win: field === 'countback_win' ? value : v.countback_win,
           },
         ],
       }),
@@ -244,7 +244,6 @@ export default function EventDetailPage() {
         points: v.points,
         longest_drive: v.longest_drive,
         closest_to_pin: v.closest_to_pin,
-        countback_win: v.countback_win,
         tutu: newValue,
       },
     ];
@@ -255,7 +254,6 @@ export default function EventDetailPage() {
         points: prevV.points,
         longest_drive: prevV.longest_drive,
         closest_to_pin: prevV.closest_to_pin,
-        countback_win: prevV.countback_win,
         tutu: false,
       });
     }
@@ -654,7 +652,7 @@ export default function EventDetailPage() {
                     <Crosshair size={12} className="inline text-gold ml-1" title="Closest to the Pin" />
                   )}
                   {row.countback_win && (
-                    <Award size={12} className="inline text-posgmuted ml-1" title="Won on countback" />
+                    <Award size={12} className="inline text-posgmuted ml-1" title={row.countback_label} />
                   )}
                 </span>
                 <span className="text-posgmuted text-xs font-mono text-center">{row.thru ?? '–'}</span>
@@ -818,16 +816,18 @@ export default function EventDetailPage() {
           below the standings now (was above until 2026-07-29). */}
       <ScorecardsSection eventId={id} />
 
-      {/* Longest Drive / Closest to the Pin / Countback — a scorecard never
+      {/* Longest Drive / Closest to the Pin / The Tutu — a scorecard never
           captures these on its own, so this stays a manual step regardless
           of whether a player's points came from a scorecard or were typed
           in directly. Admin-only — these are committee calls, not something
-          players record about themselves. */}
+          players record about themselves. (Countback used to live here too
+          as a manual tick — replaced 2026-09-18 by automatic countback off
+          the real scorecard, see lib/countback.js.) */}
       {isAdmin && (
       <>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">
-          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / Countback / The Tutu
+          <Award size={17} className="text-gold" /> Longest Drive / Closest to the Pin / The Tutu
         </h2>
         <button
           onClick={() => setBonusOpen((v) => !v)}
@@ -849,7 +849,6 @@ export default function EventDetailPage() {
                 <th className="px-4 py-3">Player</th>
                 <th className="px-4 py-3 text-center w-32">Longest Drive</th>
                 <th className="px-4 py-3 text-center w-32">Closest to the Pin</th>
-                <th className="px-4 py-3 text-center w-24">Countback</th>
                 <th className="px-4 py-3 text-center w-24">The Tutu</th>
               </tr>
             </thead>
@@ -880,16 +879,6 @@ export default function EventDetailPage() {
                         checked={!!form[p.id]?.closest_to_pin}
                         onChange={(e) => saveResultField(p.id, 'closest_to_pin', e.target.checked)}
                         className="accent-fairway w-4 h-4 disabled:opacity-30"
-                      />
-                    </td>
-                    <td className="px-4 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        disabled={!hasResult}
-                        checked={!!form[p.id]?.countback_win}
-                        onChange={(e) => saveResultField(p.id, 'countback_win', e.target.checked)}
-                        className="accent-gold w-4 h-4 disabled:opacity-30"
-                        title="Tick if the committee decided this player wins a tie on points"
                       />
                     </td>
                     <td className="px-4 py-2 text-center">

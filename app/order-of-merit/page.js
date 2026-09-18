@@ -103,19 +103,39 @@ export default function OrderOfMeritPage() {
               <PositionBadge position={r.position} />
 
               <div className="min-w-0 flex-1">
-                <div className="text-base font-bold text-posgtext truncate">{r.name}</div>
+                <div className="text-base font-bold text-posgtext truncate">
+                  {r.name}
+                  {r.provisional && (
+                    <span className="ml-2 text-[9px] font-normal uppercase tracking-wide text-posgmuted/70 align-middle">
+                      Provisional
+                    </span>
+                  )}
+                </div>
                 {events.length > 0 && (
                   <div className="flex flex-wrap gap-3 mt-1.5">
-                    {events.map((e) => (
-                      <div key={e.id} className="flex flex-col items-center leading-tight" title={e.name}>
-                        <span className="text-[9px] uppercase tracking-wide text-posgmuted/50">
-                          {e.label}
-                        </span>
-                        <span className="text-xs font-mono text-posgmuted">
-                          {r.by_event?.[e.id] ?? '–'}
-                        </span>
-                      </div>
-                    ))}
+                    {events.map((e) => {
+                      const cell = r.by_event?.[e.id];
+                      return (
+                        <div key={e.id} className="flex flex-col items-center leading-tight" title={e.name}>
+                          <span className="text-[9px] uppercase tracking-wide text-posgmuted/50">
+                            {e.label}
+                          </span>
+                          <span
+                            className={
+                              'text-xs font-mono ' +
+                              (!cell
+                                ? 'text-posgmuted'
+                                : cell.counts
+                                ? 'text-posgtext font-semibold'
+                                : 'text-posgmuted/50 line-through')
+                            }
+                            title={cell && !cell.counts ? 'Dropped — not one of the best 2' : undefined}
+                          >
+                            {cell ? cell.points : '–'}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -137,9 +157,12 @@ export default function OrderOfMeritPage() {
       )}
 
       <p className="text-xs text-posgmuted mt-4">
-        No shared positions — a tie on points is broken automatically by whoever scored
-        higher in their most recent round, then by a committee countback decision if
-        that's still tied.
+        Points are field-size-adjusted — 1st always scores 100, last always scores 0,
+        everyone else scaled by how many players they actually beat that day. Total is
+        the best 2 event scores out of however many were played (struck-through numbers
+        above didn't count). A player with only 1 event shows that score as provisional.
+        Two players landing on the exact same total currently share a position — a
+        tie-break rule for the Order of Merit itself is still to be decided.
       </p>
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { betterBallHolePoints, matchPlayHoleResult, matchStatus, matchPerspective } from "@/lib/scoring";
+import { computeCountbackTiers, rankByOverallAndCountback, decidingCountbackTier } from "@/lib/countback";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export async function GET(request, { params }) {
       : Promise.resolve({ data: [] }),
     supabase
       .from("event_results")
-      .select("player_id, points, longest_drive, closest_to_pin, countback_win, tutu, scorecard_id, players(id, name)")
+      .select("player_id, points, longest_drive, closest_to_pin, tutu, scorecard_id, players(id, name)")
       .eq("event_id", eventId),
   ]);
 
@@ -75,12 +76,14 @@ export async function GET(request, { params }) {
   // this just gives it the raw per-player totals to filter.
   const threePuttsByPlayer = {};
   const grossTotalByPlayer = {};
+  const holesByPlayer = {};
   (holeScores || []).forEach((hs) => {
     pointsByPlayer[hs.player_id] = (pointsByPlayer[hs.player_id] || 0) + hs.stableford_points;
     grossTotalByPlayer[hs.player_id] = (grossTotalByPlayer[hs.player_id] || 0) + (hs.gross_score || 0);
     if (hs.three_putt) {
       threePuttsByPlayer[hs.player_id] = (threePuttsByPlayer[hs.player_id] || 0) + 1;
     }
+    (holesByPlayer[hs.player_id] ||= []).push(hs);
   });
 
   // "Thru" (holes played so far) — one scorecard's holes are always entered
@@ -109,7 +112,6 @@ export async function GET(request, { params }) {
     bonusByPlayer[r.player_id] = {
       longest_drive: !!r.longest_drive,
       closest_to_pin: !!r.closest_to_pin,
-      countback_win: !!r.countback_win,
       tutu: !!r.tutu,
     };
     if (r.players?.name) nameByPlayer[r.player_id] = r.players.name;
@@ -120,32 +122,46 @@ export async function GET(request, { params }) {
     }
   });
 
-  const individual = Object.keys(pointsByPlayer)
-    .map((playerId) => {
-      const bonus = bonusByPlayer[playerId] || {};
-      const raw = pointsByPlayer[playerId] || 0;
-      const overall = raw + (bonus.longest_drive ? 2 : 0) + (bonus.closest_to_pin ? 2 : 0);
-      // No scorecard at all (pure manual entry) reads as "F" — it's a
-      // finished, entered result, same as a completed scorecard.
-      const thru = scorecardIdByPlayer[playerId] ? thruFor(scorecardIdByPlayer[playerId]) : "F";
-      return {
-        player_id: playerId,
-        name: nameByPlayer[playerId] || "Unknown",
-        points: raw,
-        overall,
-        thru,
-        longest_drive: !!bonus.longest_drive,
-        closest_to_pin: !!bonus.closest_to_pin,
-        countback_win: !!bonus.countback_win,
-        tutu: !!bonus.tutu,
-        three_putts: threePuttsByPlayer[playerId] || 0,
-        gross_total: grossTotalByPlayer[playerId] || 0,
-      };
-    })
-    .sort((a, b) => {
-      if (b.overall !== a.overall) return b.overall - a.overall;
-      return (b.countback_win ? 1 : 0) - (a.countback_win ? 1 : 0);
-    });
+  // Automatic countback (see lib/countback.js) replaces the old manually-
+  // ticked flag entirely. Tiers are computed straight off this player's own
+  // hole_scores, whatever they've played so far — live and mid-round, that
+  // naturally sharpens as more holes go in, same as the team board below.
+  const individualEntries = Object.keys(pointsByPlayer).map((playerId) => {
+    const bonus = bonusByPlayer[playerId] || {};
+    const raw = pointsByPlayer[playerId] || 0;
+    const overall = raw + (bonus.longest_drive ? 2 : 0) + (bonus.closest_to_pin ? 2 : 0);
+    // No scorecard at all (pure manual entry) reads as "F" — it's a
+    // finished, entered result, same as a completed scorecard.
+    const thru = scorecardIdByPlayer[playerId] ? thruFor(scorecardIdByPlayer[playerId]) : "F";
+    return {
+      player_id: playerId,
+      name: nameByPlayer[playerId] || "Unknown",
+      points: raw,
+      overall,
+      ...computeCountbackTiers(holesByPlayer[playerId] || []),
+      thru,
+      longest_drive: !!bonus.longest_drive,
+      closest_to_pin: !!bonus.closest_to_pin,
+      tutu: !!bonus.tutu,
+      three_putts: threePuttsByPlayer[playerId] || 0,
+      gross_total: grossTotalByPlayer[playerId] || 0,
+    };
+  });
+
+  const individual = rankByOverallAndCountback(individualEntries);
+  let indivPosition = 0;
+  individual.forEach((row, i) => {
+    const prev = individual[i - 1];
+    const stillTied = prev && prev.overall === row.overall && !decidingCountbackTier(prev, row);
+    if (!stillTied) indivPosition = i + 1;
+    row.position = indivPosition;
+    // Same "why it's ahead" label the team board already shows, just for
+    // an individual tie — null once nothing is left tied on total.
+    const next = individual[i + 1];
+    const crit = next ? decidingCountbackTier(row, next) : null;
+    row.countback_win = !!crit;
+    row.countback_label = crit ? `Won on countback — ${crit}` : null;
+  });
 
   // --- Team leaderboard (better ball stableford only — one row per
   // scorecard's team, recomputed live the same way /complete would write

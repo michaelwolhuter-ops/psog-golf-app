@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { rankEventResults, getPlayerScorecardMap } from "@/lib/countback";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ async function getEventWinners(supabase, eventId) {
   const [{ data: results }, { data: teams }] = await Promise.all([
     supabase
       .from("event_results")
-      .select("points, longest_drive, closest_to_pin, countback_win, players(name)")
+      .select("event_id, player_id, points, longest_drive, closest_to_pin, players(name)")
       .eq("event_id", eventId),
     supabase
       .from("event_teams")
@@ -20,17 +21,20 @@ async function getEventWinners(supabase, eventId) {
 
   let individual_winner = null;
   if (results && results.length > 0) {
-    const ranked = results
-      .filter((r) => r.points !== null && r.points !== undefined)
-      .map((r) => ({
-        name: r.players?.name,
-        overall: Number(r.points) + (r.longest_drive ? 2 : 0) + (r.closest_to_pin ? 2 : 0),
-        countback_win: r.countback_win,
-      }))
-      .sort((a, b) => {
-        if (b.overall !== a.overall) return b.overall - a.overall;
-        return (b.countback_win ? 1 : 0) - (a.countback_win ? 1 : 0);
-      });
+    const playerScorecardMap = await getPlayerScorecardMap(supabase, [eventId]);
+    const scorecardIds = [...new Set(Object.values(playerScorecardMap))];
+    const { data: holeScores } = scorecardIds.length
+      ? await supabase
+          .from("hole_scores")
+          .select("scorecard_id, player_id, hole_number, stableford_points")
+          .in("scorecard_id", scorecardIds)
+      : { data: [] };
+    const rankedByEvent = rankEventResults(
+      results.map((r) => ({ ...r, name: r.players?.name })),
+      holeScores,
+      playerScorecardMap
+    );
+    const ranked = rankedByEvent[eventId] || [];
     if (ranked.length > 0) individual_winner = ranked[0].name;
   }
 
