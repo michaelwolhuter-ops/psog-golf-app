@@ -58,11 +58,16 @@ const GROUPS = [
   {
     title: 'Round Averages',
     categories: [
-      { key: 'average_gross', label: 'Average Gross', icon: Sigma, valueClass: 'text-posgtext', decimals: 1 },
-      { key: 'birdies', label: 'Average Birdies Per Round', icon: Bird, valueClass: 'text-posgtext', decimals: 1 },
-      { key: 'pars', label: 'Average Pars Per Round', icon: Circle, valueClass: 'text-posgtext', decimals: 1 },
-      { key: 'rings', label: 'Average Rings Per Round', icon: CircleSlash, valueClass: 'text-posgtext', decimals: 1 },
-      { key: 'three_putts', label: 'Average 3-Putts Per Round', icon: Repeat2, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'average_gross', label: 'Best Average Gross', icon: Sigma, valueClass: 'text-fairway', decimals: 1 },
+      { key: 'average_gross_worst', label: 'Worst Average Gross', icon: Sigma, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'birdies', label: 'Most Birdies Per Round', icon: Bird, valueClass: 'text-fairway', decimals: 1 },
+      { key: 'birdies_worst', label: 'Fewest Birdies Per Round', icon: Bird, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'pars', label: 'Most Pars Per Round', icon: Circle, valueClass: 'text-fairway', decimals: 1 },
+      { key: 'pars_worst', label: 'Fewest Pars Per Round', icon: Circle, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'rings_best', label: 'Fewest Rings Per Round', icon: CircleSlash, valueClass: 'text-fairway', decimals: 1 },
+      { key: 'rings', label: 'Most Rings Per Round', icon: CircleSlash, valueClass: 'text-posgtext', decimals: 1 },
+      { key: 'three_putts_best', label: 'Fewest 3-Putts Per Round', icon: Repeat2, valueClass: 'text-fairway', decimals: 1 },
+      { key: 'three_putts', label: 'Most 3-Putts Per Round', icon: Repeat2, valueClass: 'text-posgtext', decimals: 1 },
     ],
   },
   {

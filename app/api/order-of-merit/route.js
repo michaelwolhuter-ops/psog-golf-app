@@ -23,9 +23,6 @@ export async function GET() {
 
   const [{ data, error }, { data: allEvents }, { data: eventPositions }] = await Promise.all([
     supabase.from("order_of_merit").select("*").order("total_points", { ascending: false }),
-    // All events, not just completed ones — the columns for R2/R3/R4/T1/T2
-    // should always be visible on the schedule, they just won't have a
-    // number in them until that event is entered *and* marked Completed.
     supabase.from("events").select("id, name, sort_order, status").order("sort_order", { ascending: true }),
     // Field-size-adjusted points per player per completed event (see the
     // event_positions DB view) — this is what the season total is actually
@@ -37,11 +34,19 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const events = (allEvents || []).map((e) => ({
-    id: e.id,
-    name: e.name,
-    label: abbreviateEventName(e.name),
-  }));
+  // Only events actually played so far get a column — showing every future
+  // Q/T slot made the per-event breakdown too wide on mobile (Mike's call,
+  // 2026-09-18). A simple fix for now; a fuller schedule view can come back
+  // later if wanted. event_positions itself only ever has rows for
+  // completed events anyway, so an in-progress/upcoming column would be
+  // empty regardless.
+  const events = (allEvents || [])
+    .filter((e) => e.status === "completed")
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      label: abbreviateEventName(e.name),
+    }));
 
   // Build player_id -> [{event_id, event_points}], sorted best first, so
   // the page can mark which 2 scores are actually counting toward the total

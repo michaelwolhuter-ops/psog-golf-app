@@ -161,12 +161,26 @@ export async function GET() {
       false // 0 points in a round is a real (if brutal) value, not "no data" — don't drop it
     ),
     average_gross: topN(roundExtremeRows, (p) => p.average_gross, "asc"),
+    average_gross_worst: topN(roundExtremeRows, (p) => p.average_gross, "desc"),
     rounds_100_plus: topN(perPlayer, (p) => p.rounds_100_plus, "desc"),
     eagles: topN(perPlayer, (p) => p.eagles, "desc"),
     birdies: topN(roundExtremeRows, (p) => p.avg_birdies, "desc"),
+    // "Worst" end of each per-round average — same players (at least 1 full
+    // round played, via roundExtremeRows), just sorted the other way. Zero
+    // is NOT dropped here (dropZero=false) — a genuine 0 average is exactly
+    // what belongs at the bottom of the list, unlike the "best" side above
+    // where a 0 would just mean "no achievement", not a real ranking.
+    birdies_worst: topN(roundExtremeRows, (p) => p.avg_birdies, "asc", false),
     pars: topN(roundExtremeRows, (p) => p.avg_pars, "desc"),
+    pars_worst: topN(roundExtremeRows, (p) => p.avg_pars, "asc", false),
+    // Rings and 3-putts are bad outcomes, so their existing "desc" cards are
+    // already the worst end (most rings/3-putts per round) — the added
+    // counterpart here is the genuinely GOOD end (fewest per round), where
+    // 0 is the best possible value and must not be dropped.
     rings: topN(roundExtremeRows, (p) => p.avg_rings, "desc"),
+    rings_best: topN(roundExtremeRows, (p) => p.avg_rings, "asc", false),
     three_putts: topN(roundExtremeRows, (p) => p.avg_three_putts, "desc"),
+    three_putts_best: topN(roundExtremeRows, (p) => p.avg_three_putts, "asc", false),
     individual_wins: topN(winRows, (p) => p.individual, "desc"),
     team_wins: topN(winRows, (p) => p.team, "desc"),
     top3_finishes: topN(finishRows, (p) => p.top3, "desc"),
