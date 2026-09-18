@@ -630,7 +630,9 @@ export default function EventDetailPage() {
               <span className="text-center">Thru</span>
               <span className="text-right">Total</span>
             </div>
-            {liveBoard.individual.map((row, i) => (
+            {liveBoard.individual.map((row, i) => {
+              const isLast = i === liveBoard.individual.length - 1 && liveBoard.individual.length > 1;
+              return (
               <div
                 key={row.player_id}
                 className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 items-center py-1.5 border-b border-posgborder/40 last:border-0"
@@ -640,8 +642,9 @@ export default function EventDetailPage() {
                     'flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ' +
                     (i === 0 ? 'bg-gold/20 text-gold' : 'text-posgmuted')
                   }
+                  title={isLast ? 'Last place' : undefined}
                 >
-                  {i === 0 ? <Trophy size={12} /> : i + 1}
+                  {i === 0 ? <Trophy size={12} /> : isLast ? '💩' : i + 1}
                 </span>
                 <span className="text-posgtext text-sm font-semibold truncate">
                   {row.name}
@@ -658,7 +661,8 @@ export default function EventDetailPage() {
                 <span className="text-posgmuted text-xs font-mono text-center">{row.thru ?? '–'}</span>
                 <span className="text-gold font-mono font-bold text-right">{row.overall}</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
