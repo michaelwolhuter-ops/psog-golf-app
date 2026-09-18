@@ -930,12 +930,10 @@ export default function ScorecardEntryPage() {
       )}
 
       {liveBoard && liveBoard.matches.filter((m) => m.scorecard_id !== scorecard.id).length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
-              <Swords size={13} className="text-gold" /> Other Matches
-            </h2>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Swords size={13} className="text-gold" /> Other Matches
+          </h2>
           {/* grid-cols-1 explicit, not just the bare `grid` class — Tailwind's
               grid-cols-N utilities define tracks as minmax(0,1fr), which is
               what actually lets a long match card shrink to fit; the bare
@@ -959,10 +957,11 @@ export default function ScorecardEntryPage() {
           even while this marker isn't the one tapping anything. Styled as
           a real tour leaderboard — POS / PLAYER / THRU / TOTAL — per
           Mike's ask, not a plain list. */}
-      <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-        <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+      <div className="mb-4">
+        <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
           <Trophy size={13} className="text-gold" /> Live Leaderboard — Individual
         </h2>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
         {!liveBoard ? (
           <p className="text-posgmuted text-sm">Loading…</p>
         ) : liveBoard.individual.length === 0 ? (
@@ -1007,14 +1006,15 @@ export default function ScorecardEntryPage() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {/* Matchplay Leaderboard — same shared component/data the event page
           uses, added here too per Mike's ask (2026-09-18): he wants it on
           the score entry screen as well, right under the Individual board. */}
       {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="mb-4">
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Swords size={13} className="text-gold" /> Matchplay Leaderboard
           </h2>
           <DominationBoard domination={liveBoard.domination || []} />
@@ -1022,10 +1022,11 @@ export default function ScorecardEntryPage() {
       )}
 
       {liveBoard && liveBoard.team.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="mb-4">
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Users2 size={13} /> Live Leaderboard — Team
           </h2>
+          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
             <span>Pos</span>
             <span>Team</span>
@@ -1063,6 +1064,7 @@ export default function ScorecardEntryPage() {
               </span>
             </div>
           ))}
+          </div>
         </div>
       )}
 

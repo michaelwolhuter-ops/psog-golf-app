@@ -614,10 +614,11 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-        <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+      <div className="mb-4">
+        <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
           <Trophy size={13} className="text-gold" /> Individual
         </h3>
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4">
         {!liveBoard ? (
           <p className="text-posgmuted text-sm">Loading…</p>
         ) : liveBoard.individual.length === 0 ? (
@@ -665,13 +666,15 @@ export default function EventDetailPage() {
             })}
           </div>
         )}
+        </div>
       </div>
 
       {liveBoard && liveBoard.team.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Users2 size={13} /> Team
           </h3>
+          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="grid grid-cols-[2rem_1fr_3rem_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
             <span>Pos</span>
             <span>Team</span>
@@ -709,6 +712,7 @@ export default function EventDetailPage() {
               </span>
             </div>
           ))}
+          </div>
         </div>
       )}
 
@@ -716,10 +720,11 @@ export default function EventDetailPage() {
           whole event being completed, not shown or updated while any round
           is still in progress. */}
       {event.status === 'completed' && grossBoard.length > 0 && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Flag size={13} className="text-gold" /> Gross Leaderboard
           </h3>
+          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div>
             <div className="grid grid-cols-[2rem_1fr_4rem] gap-2 text-[10px] text-posgmuted uppercase tracking-wide px-1 pb-1.5 border-b border-posgborder">
               <span>Pos</span>
@@ -744,6 +749,7 @@ export default function EventDetailPage() {
               </div>
             ))}
           </div>
+          </div>
         </div>
       )}
 
@@ -753,10 +759,11 @@ export default function EventDetailPage() {
           misleading mid-round "leaders". Placed after Team, before Matches,
           per Mike's ask (2026-08-07). */}
       {hasAwards && (
-        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
-          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+        <div className="mb-4">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <Award size={13} className="text-gold" /> Awards
           </h3>
+          <div className="bg-posgcard rounded-xl border border-posgborder p-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {threePuttLeaders.length > 0 && (
               <div className="bg-posgbg rounded-lg p-3">
@@ -811,6 +818,7 @@ export default function EventDetailPage() {
                 <p className="text-sm text-posgtext font-semibold">{tutuPlayer.name}</p>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}
