@@ -287,6 +287,9 @@ export async function GET(request, { params }) {
 
   // --- Live matches (better ball match play — never fed a points table,
   // shown as running/final match status instead). ---
+  // First names only for the pairing display (Mike's ask, 2026-09-18) — full
+  // names made the match cards too wide to scan quickly at a glance.
+  const firstName = (fullName) => (fullName || "").trim().split(/\s+/)[0] || fullName;
   const matches = [];
   const domination = [];
   for (const sc of scorecards || []) {
@@ -296,12 +299,12 @@ export async function GET(request, { params }) {
     const teamB = members.filter((m) => m.team_number === 2).map((m) => m.player_id);
     const namesA = members
       .filter((m) => m.team_number === 1)
-      .map((m) => m.players?.name)
+      .map((m) => firstName(m.players?.name))
       .filter(Boolean)
       .join(" & ");
     const namesB = members
       .filter((m) => m.team_number === 2)
-      .map((m) => m.players?.name)
+      .map((m) => firstName(m.players?.name))
       .filter(Boolean)
       .join(" & ");
 
