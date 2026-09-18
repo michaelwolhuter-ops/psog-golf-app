@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ScorecardTable } from '@/app/ScorecardTable';
 import { MatchCard } from '@/app/MatchCard';
+import { DominationBoard } from '@/app/DominationBoard';
 import {
   strokesReceived,
   resolveHoleScore,
@@ -1025,6 +1026,18 @@ export default function ScorecardEntryPage() {
           </div>
         )}
       </div>
+
+      {/* Matchplay Leaderboard — same shared component/data the event page
+          uses, added here too per Mike's ask (2026-09-18): he wants it on
+          the score entry screen as well, right under the Individual board. */}
+      {liveBoard && liveBoard.matches.length > 0 && (
+        <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
+          <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Swords size={13} className="text-gold" /> Matchplay Leaderboard
+          </h2>
+          <DominationBoard domination={liveBoard.domination || []} />
+        </div>
+      )}
 
       {liveBoard && liveBoard.team.length > 0 && (
         <div className="bg-posgcard rounded-xl border border-posgborder p-4 mb-4">
