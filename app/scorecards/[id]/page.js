@@ -935,11 +935,6 @@ export default function ScorecardEntryPage() {
             <h2 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5">
               <Swords size={13} className="text-gold" /> Other Matches
             </h2>
-            {scorecard.event_id && (
-              <Link href={`/events/${scorecard.event_id}/matches`} className="text-[11px] text-posgmuted hover:text-posgtext">
-                View all →
-              </Link>
-            )}
           </div>
           {/* grid-cols-1 explicit, not just the bare `grid` class — Tailwind's
               grid-cols-N utilities define tracks as minmax(0,1fr), which is
