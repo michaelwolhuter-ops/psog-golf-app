@@ -293,20 +293,11 @@ export default function ScorecardEntryPage() {
     setExpandedPlayer(null);
   }
 
-  function tapRing(playerId) {
-    const cap = ringCap(hole.par);
-    setDraft((d) => ({
-      ...d,
-      [playerId]: { gross_score: cap, rung: true, three_putt: !!d[playerId]?.three_putt },
-    }));
-    setExpandedPlayer(null);
-  }
-
   // Ticking 3 Putt doesn't require a score to already be chosen — a marker
   // might tick it first, then pick the score — so this merges into whatever
   // draft entry exists (or starts a bare one) rather than requiring
-  // gross_score to be set already. Kept separate from tap()/tapRing() so
-  // toggling it never clobbers a score already chosen for this hole.
+  // gross_score to be set already. Kept separate from tap() so toggling it
+  // never clobbers a score already chosen for this hole.
   function toggleThreePutt(playerId) {
     setDraft((d) => ({
       ...d,
@@ -720,11 +711,13 @@ export default function ScorecardEntryPage() {
                     </div>
                   )}
 
-                  {/* One merged row — quick-taps + Ring + More together, in
-                      that order — so it wraps naturally (2 lines on a phone,
-                      1 on desktop) instead of being forced onto a 3rd line
-                      by living in a separate row of its own. Ring sits
-                      before More per Mike's ask. */}
+                  {/* One merged row — quick-taps + More — six tiles exactly,
+                      two clean rows of three on a phone. Ring was removed
+                      2026-09-18 (Mike's call): a typed score worse than
+                      triple bogey already auto-caps to zero points via
+                      resolveHoleScore, so there was never a scoring reason
+                      to keep a separate "give up" button — just type
+                      whatever number you reached via More… */}
                   {/* Grid, not flex-wrap — a wrapped flex row leaves
                       whatever gap is left on the last line of each row
                       empty (buttons only as wide as their own label), so
@@ -750,16 +743,6 @@ export default function ScorecardEntryPage() {
                         </button>
                       );
                     })}
-                    <button
-                      onClick={() => tapRing(player.id)}
-                      className={
-                        'text-xs px-2 py-2 rounded-md font-medium transition ' +
-                        (rung ? 'bg-gold text-black' : 'bg-posgborder text-posgmuted hover:bg-posgcardhover')
-                      }
-                      title="Picked up without finishing — records triple bogey, 0 pts, automatically"
-                    >
-                      Ring
-                    </button>
                     <button
                       onClick={() =>
                         setExpandedPlayer(expandedPlayer === player.id ? null : player.id)
