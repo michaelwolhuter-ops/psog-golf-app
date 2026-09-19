@@ -617,15 +617,6 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {liveBoard && liveBoard.matches.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
-            <Swords size={13} className="text-gold" /> Matchplay Leaderboard
-          </h3>
-          <DominationBoard domination={liveBoard.domination || []} />
-        </div>
-      )}
-
       <div className="mb-4">
         <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide mb-2 flex items-center gap-1.5">
           <Trophy size={13} className="text-gold" /> Individual
@@ -680,6 +671,15 @@ export default function EventDetailPage() {
         )}
         </div>
       </div>
+
+      {liveBoard && liveBoard.matches.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-xs font-semibold text-posgmuted uppercase tracking-wide flex items-center gap-1.5 mb-2">
+            <Swords size={13} className="text-gold" /> Matchplay Leaderboard
+          </h3>
+          <DominationBoard domination={liveBoard.domination || []} />
+        </div>
+      )}
 
       {liveBoard && liveBoard.team.length > 0 && (
         <div className="mb-4">
