@@ -380,10 +380,20 @@ export default function EventDetailPage() {
   // can come back for info later on."
   const liveViewerMode = !isAdmin && event.status === 'in_progress';
 
+  // True the moment any hole has been saved for any scorecard in this event
+  // — liveBoard.individual only ever gains an entry once a player has at
+  // least one hole_scores row (or, for a manual-only entry, a points value
+  // on record). Once this flips true, non-admins have nothing left to start
+  // — every group that's going to play has already tapped New Scorecard —
+  // so the button disappears for them; they're viewers from here on.
+  // Admins keep it always, for a late correction.
+  const holeScoringStarted = !!(liveBoard && liveBoard.individual.length > 0);
+
   return (
     <div>
       {ConfirmDialog}
       {liveViewerMode ? (
+        !holeScoringStarted && (
         <Link
           href={`/events/${id}/scorecard/new`}
           className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-2 rounded-md hover:bg-fairway/25 transition mb-4"
@@ -391,6 +401,7 @@ export default function EventDetailPage() {
         >
           <ClipboardList size={14} /> New Scorecard
         </Link>
+        )
       ) : (
         <>
           <Link
@@ -415,11 +426,12 @@ export default function EventDetailPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {/* Once an event is Final Results, starting another scorecard
-                  is an admin correction, not something a player does —
-                  hidden for non-admins here, same "clean, no clutter once
-                  it's done" principle as the rest of this page. */}
-              {(event.status !== 'completed' || isAdmin) && (
+              {/* Once an event is Final Results, or once any hole has been
+                  scored anywhere in it, starting another scorecard is an
+                  admin correction, not something a player does — hidden for
+                  non-admins here, same "clean, no clutter once it's done"
+                  principle as the rest of this page. */}
+              {(isAdmin || (event.status !== 'completed' && !holeScoringStarted)) && (
               <Link
                 href={`/events/${id}/scorecard/new`}
                 className="inline-flex items-center gap-1.5 text-sm bg-fairway/15 text-fairway border border-fairway/30 px-3 py-1.5 rounded-md hover:bg-fairway/25 transition"
