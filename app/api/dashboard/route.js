@@ -73,6 +73,7 @@ export async function GET() {
       .from("events")
       .select("*")
       .eq("status", "upcoming")
+      .neq("event_type", "once_off")
       .order("sort_order", { ascending: true })
       .limit(4),
     supabase.from("qualification_status").select("*"),
@@ -81,6 +82,7 @@ export async function GET() {
       .from("events")
       .select("*")
       .eq("status", "completed")
+      .neq("event_type", "once_off")
       .order("sort_order", { ascending: false })
       .limit(1),
     supabase.from("player_handicaps").select("*"),

@@ -66,8 +66,9 @@ export async function GET() {
   }
 
   // Winners only make sense once an event is done.
+  const onceOff = (events || []).filter((e) => e.event_type === "once_off");
   const withWinners = await Promise.all(
-    (events || []).map(async (e) => {
+    (events || []).filter((e) => e.event_type !== "once_off").map(async (e) => {
       if (e.status !== "completed") {
         return { ...e, individual_winner: null, team_winner_names: [] };
       }
@@ -80,7 +81,11 @@ export async function GET() {
     .from("qualification_status")
     .select("*");
 
-  return NextResponse.json({ data: withWinners, qualification: qualification || [] });
+  return NextResponse.json({
+    data: withWinners,
+    once_off: onceOff,
+    qualification: qualification || [],
+  });
 }
 
 export async function POST(request) {
@@ -91,14 +96,18 @@ export async function POST(request) {
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
-  if (!["qualifier", "tour_day"].includes(body.event_type)) {
-    return NextResponse.json({ error: "event_type must be qualifier or tour_day" }, { status: 400 });
+  if (!["qualifier", "tour_day", "once_off"].includes(body.event_type)) {
+    return NextResponse.json(
+      { error: "event_type must be qualifier, tour_day or once_off" },
+      { status: 400 }
+    );
   }
 
   // New events sort to the end by default.
   const { data: maxRow } = await supabase
     .from("events")
     .select("sort_order")
+    .neq("event_type", "once_off")
     .order("sort_order", { ascending: false })
     .limit(1)
     .single();

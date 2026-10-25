@@ -27,7 +27,7 @@ import {
   Shirt,
 } from 'lucide-react';
 
-const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day' };
+const typeLabel = { qualifier: 'Qualifier', tour_day: 'Tour Day', once_off: 'Once-Off Event' };
 
 const FORMAT_OPTIONS = [
   'Individual Stableford',
@@ -847,7 +847,7 @@ export default function EventDetailPage() {
           players record about themselves. (Countback used to live here too
           as a manual tick — replaced 2026-09-18 by automatic countback off
           the real scorecard, see lib/countback.js.) */}
-      {isAdmin && (
+      {isAdmin && event.event_type !== 'once_off' && (
       <>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-posgtext flex items-center gap-2">

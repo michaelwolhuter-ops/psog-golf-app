@@ -23,7 +23,7 @@ export async function GET() {
 
   const [{ data, error }, { data: allEvents }, { data: eventPositions }] = await Promise.all([
     supabase.from("order_of_merit").select("*").order("total_points", { ascending: false }),
-    supabase.from("events").select("id, name, sort_order, status").order("sort_order", { ascending: true }),
+    supabase.from("events").select("id, name, sort_order, status, event_type").order("sort_order", { ascending: true }),
     // Field-size-adjusted points per player per completed event (see the
     // event_positions DB view) — this is what the season total is actually
     // built from now, not raw scorecard points.
@@ -41,7 +41,7 @@ export async function GET() {
   // completed events anyway, so an in-progress/upcoming column would be
   // empty regardless.
   const events = (allEvents || [])
-    .filter((e) => e.status === "completed")
+    .filter((e) => e.status === "completed" && e.event_type !== "once_off")
     .map((e) => ({
       id: e.id,
       name: e.name,

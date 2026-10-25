@@ -10,6 +10,11 @@ export async function POST(request, { params }) {
   const supabase = createServerClient();
   const { id: event_id } = params;
   const body = await request.json();
+
+  const { data: ev } = await supabase.from("events").select("event_type").eq("id", event_id).single();
+  if (ev?.event_type === "once_off") {
+    return NextResponse.json({ error: "Once-off events do not record tour results" }, { status: 400 });
+  }
   const rows = body.results || [];
 
   const toSave = rows.filter((r) => r.points !== null && r.points !== "" && r.points !== undefined);

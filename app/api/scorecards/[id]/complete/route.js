@@ -39,6 +39,25 @@ export async function POST(request, { params }) {
 
   const eventId = scorecard.event_id;
 
+  // Once-off events keep their scores in hole_scores only (the live
+  // leaderboard reads those directly). Nothing is written to the tour tables.
+  const { data: eventRow } = await supabase
+    .from("events")
+    .select("event_type")
+    .eq("id", eventId)
+    .single();
+  if (eventRow?.event_type === "once_off") {
+    const { error: onceOffError } = await supabase
+      .from("scorecards")
+      .update({ status: "completed" })
+      .eq("id", id);
+    if (onceOffError) {
+      return NextResponse.json({ error: onceOffError.message }, { status: 500 });
+    }
+    await syncEventStatus(supabase, eventId);
+    return NextResponse.json({ success: true });
+  }
+
   // --- Individual results: every format feeds this the same way ---
   // Sum each player's stableford points across whatever holes were played.
   const pointsByPlayer = {};
