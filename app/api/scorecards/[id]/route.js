@@ -14,7 +14,7 @@ export async function GET(request, { params }) {
 
   const { data: scorecard, error: scError } = await supabase
     .from("scorecards")
-    .select("*, events(id, name, event_date)")
+    .select("*, events(id, name, event_date, event_type)")
     .eq("id", id)
     .single();
 

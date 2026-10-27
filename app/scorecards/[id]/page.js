@@ -274,6 +274,11 @@ export default function ScorecardEntryPage() {
   if (!scorecard || !course) return <p className="text-posgmuted">Loading…</p>;
 
   const isTeamFormat = scorecard.format !== 'individual_stableford';
+  // Social Golf rounds live on a hidden once-off event players never see,
+  // so "back" goes to the Social Golf page instead of that event.
+  const isSocial = scorecard.events?.event_type === 'once_off';
+  const backHref = isSocial ? '/social' : `/events/${scorecard.event_id}`;
+  const backLabel = isSocial ? 'Social Golf' : 'event';
   const isMatchPlay = scorecard.format === 'better_ball_match_play';
 
   const holesCompleted = new Set();
@@ -435,7 +440,7 @@ export default function ScorecardEntryPage() {
     // scorecard instead of reaching the event page — see finishRound below,
     // same fix, same reasoning.
     setLockedScorecardId(null);
-    router.replace(`/events/${scorecard.event_id}`);
+    router.replace(backHref);
   }
 
   async function finishRound() {
@@ -445,9 +450,12 @@ export default function ScorecardEntryPage() {
     // admin using Reopen). Mike's ask, after finishing a round that turned
     // out not to be empty but also not complete.
     const incomplete = holesCompleted.size < 18;
+    const consequence = isSocial
+      ? "It's saved to Social Golf and can't be entered here again."
+      : "This writes the results into the event and can't be entered here again.";
     const message = incomplete
-      ? `This round isn't complete — only ${holesCompleted.size} of 18 holes are entered. Finish anyway? This writes the results into the event and can't be entered here again.`
-      : "Finish this round? This writes the results into the event and can't be entered here again.";
+      ? `This round isn't complete — only ${holesCompleted.size} of 18 holes are entered. Finish anyway? ${consequence}`
+      : `Finish this round? ${consequence}`;
     if (!(await confirm(message, { confirmLabel: 'Finish round' }))) {
       return;
     }
@@ -472,7 +480,7 @@ export default function ScorecardEntryPage() {
     setScorecard((s) => ({ ...s, status: 'completed' }));
     // Explicit clear — unconditional, see deleteScorecard above for why.
     setLockedScorecardId(null);
-    router.replace(`/events/${scorecard.event_id}`);
+    router.replace(backHref);
   }
 
   let liveMatch = null;
@@ -528,14 +536,14 @@ export default function ScorecardEntryPage() {
         <>
           {canLeave ? (
             <Link
-              href={`/events/${scorecard.event_id}`}
+              href={backHref}
               className="inline-flex items-center gap-1 text-sm text-posgmuted hover:text-posgtext mb-4"
             >
-              <ArrowLeft size={14} /> Back to event
+              <ArrowLeft size={14} /> Back to {backLabel}
             </Link>
           ) : (
             <p className="text-xs text-posgmuted mb-4">
-              Finish this round to head back to the event.
+              Finish this round to head back to {isSocial ? 'Social Golf' : 'the event'}.
             </p>
           )}
 
@@ -589,8 +597,9 @@ export default function ScorecardEntryPage() {
 
           {scorecard.status === 'completed' && (
             <div className="bg-fairway/10 border border-fairway/30 rounded-xl p-3 mb-6 text-sm text-fairway">
-              This round is finished and has already fed its results into the event. Use "Reopen
-              round" above to correct a mistake, or view the full card on the event page.
+              {isSocial
+                ? 'This social round is finished and saved. Use "Reopen round" above to correct a mistake.'
+                : 'This round is finished and has already fed its results into the event. Use "Reopen round" above to correct a mistake, or view the full card on the event page.'}
             </div>
           )}
         </>

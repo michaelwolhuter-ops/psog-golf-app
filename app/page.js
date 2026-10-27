@@ -14,6 +14,8 @@ import {
   UserPlus,
   ClipboardEdit,
   Settings as SettingsIcon,
+  Play,
+  ChevronRight,
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
 import AdminLock from '@/app/AdminLock';
@@ -85,6 +87,25 @@ export default function DashboardPage() {
         </div>
         <AdminLock compact />
       </div>
+
+      {/* Shortcut into Social Golf's setup screen — casual rounds outside
+          the tour. The Social Golf page itself (sidebar) holds past rounds
+          and stats. */}
+      <Link
+        href="/social/new"
+        className="flex items-center gap-3 bg-posgcard rounded-xl border border-fairway/40 p-4 mb-8 hover:border-fairway transition"
+      >
+        <span className="bg-fairway text-black rounded-full p-2 shrink-0">
+          <Play size={18} />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-semibold text-posgtext">Start a social round</span>
+          <span className="block text-xs text-posgmuted">
+            Casual golf with mates. Scored and saved, never counts toward the tour.
+          </span>
+        </span>
+        <ChevronRight size={18} className="text-posgmuted shrink-0" />
+      </Link>
 
       {/* Top summary cards */}
       <div className="grid sm:grid-cols-3 gap-4 mb-8">

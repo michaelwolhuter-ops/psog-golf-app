@@ -18,7 +18,6 @@ import { useAdmin } from '@/lib/AdminContext';
 const typeLabel = {
   qualifier: 'Qualifier',
   tour_day: 'Tour Day',
-  once_off: 'Once-Off Event',
 };
 
 // Same generic "first letter + trailing number" abbreviation the Order of
@@ -41,7 +40,6 @@ export default function EventsPage() {
   const router = useRouter();
   const { isAdmin } = useAdmin();
   const [events, setEvents] = useState(null);
-  const [onceOff, setOnceOff] = useState([]);
   const [qualification, setQualification] = useState([]);
   const [error, setError] = useState('');
 
@@ -64,7 +62,6 @@ export default function EventsPage() {
         if (body.error) setError(body.error);
         else {
           setEvents(body.data);
-          setOnceOff(body.once_off || []);
           setQualification(body.qualification || []);
         }
       });
@@ -214,7 +211,6 @@ export default function EventsPage() {
             >
               <option value="qualifier">Qualifier</option>
               <option value="tour_day">Tour Day</option>
-              <option value="once_off">Once-Off Event (casual, not part of the tour)</option>
             </select>
           </div>
           <button
@@ -390,33 +386,6 @@ export default function EventsPage() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {onceOff.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-posgtext mb-1">Once-Off Events</h2>
-          <p className="text-xs text-posgmuted mb-2">
-            Casual rounds. Never counted in the Order of Merit, handicaps or tour statistics.
-          </p>
-          <div className="space-y-2">
-            {onceOff.map((e) => (
-              <div
-                key={e.id}
-                onClick={() => router.push(`/events/${e.id}`)}
-                className="flex items-center gap-3 rounded-xl border border-posgborder bg-posgcard px-4 py-3 cursor-pointer hover:border-fairway/50 transition"
-              >
-                <span className="text-[10px] font-extrabold tracking-wide bg-gold/15 text-gold border border-gold/40 px-2 py-0.5 rounded-full">
-                  ONCE-OFF
-                </span>
-                <span className="font-semibold text-posgtext flex-1 min-w-0 truncate">{e.name}</span>
-                <span className="text-xs text-posgmuted">
-                  {e.status === 'completed' ? 'Finished' : e.status === 'in_progress' ? 'In progress' : 'Upcoming'}
-                </span>
-                <ChevronRight size={18} className="text-posgmuted shrink-0" />
-              </div>
-            ))}
-          </div>
         </div>
       )}
 

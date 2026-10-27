@@ -65,8 +65,8 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Winners only make sense once an event is done.
-  const onceOff = (events || []).filter((e) => e.event_type === "once_off");
+  // Winners only make sense once an event is done. Once-off (Social Golf)
+  // rounds are left out entirely — they live on /social now.
   const withWinners = await Promise.all(
     (events || []).filter((e) => e.event_type !== "once_off").map(async (e) => {
       if (e.status !== "completed") {
@@ -83,7 +83,6 @@ export async function GET() {
 
   return NextResponse.json({
     data: withWinners,
-    once_off: onceOff,
     qualification: qualification || [],
   });
 }

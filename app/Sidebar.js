@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Flag,
+  Coffee,
   Trophy,
   // Target, // only used by the hidden Handicaps link below — re-add if it comes back
   BarChart3,
@@ -21,6 +22,7 @@ const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/players", label: "Players", icon: Users },
   { href: "/events", label: "Events & Results", icon: Flag },
+  { href: "/social", label: "Social Golf", icon: Coffee },
   { href: "/order-of-merit", label: "Order of Merit", icon: Trophy },
   // Hidden from nav 2026-07-22, per Mike — the handicap breakdown already
   // lives on each player's own profile (Handicap section), so this separate
