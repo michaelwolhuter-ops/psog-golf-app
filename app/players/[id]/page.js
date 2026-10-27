@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { roundHandicapForStrokes } from '@/lib/scoring';
 import { useAdmin } from '@/lib/AdminContext';
+import SDTag from '@/app/SDTag';
 import { useConfirm } from '@/lib/useConfirm';
 
 function fmt(n) {
@@ -494,7 +495,7 @@ export default function PlayerProfilePage() {
                 {hole_stats?.lowest_gross ? hole_stats.lowest_gross.value : '—'}
               </div>
               {hole_stats?.lowest_gross && (
-                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_gross.event_name}</div>
+                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_gross.event_name}<SDTag show={hole_stats.lowest_gross.scramble_drive} /></div>
               )}
             </div>
             <div className="bg-posgcard rounded-xl border border-posgborder p-4">
@@ -505,7 +506,7 @@ export default function PlayerProfilePage() {
                 {hole_stats?.highest_gross ? hole_stats.highest_gross.value : '—'}
               </div>
               {hole_stats?.highest_gross && (
-                <div className="text-xs text-posgmuted truncate">{hole_stats.highest_gross.event_name}</div>
+                <div className="text-xs text-posgmuted truncate">{hole_stats.highest_gross.event_name}<SDTag show={hole_stats.highest_gross.scramble_drive} /></div>
               )}
             </div>
             <div className="bg-posgcard rounded-xl border border-posgborder p-4">
@@ -516,7 +517,7 @@ export default function PlayerProfilePage() {
                 {hole_stats?.most_points ? hole_stats.most_points.value : '—'}
               </div>
               {hole_stats?.most_points && (
-                <div className="text-xs text-posgmuted truncate">{hole_stats.most_points.event_name}</div>
+                <div className="text-xs text-posgmuted truncate">{hole_stats.most_points.event_name}<SDTag show={hole_stats.most_points.scramble_drive} /></div>
               )}
             </div>
             <div className="bg-posgcard rounded-xl border border-posgborder p-4">
@@ -527,7 +528,7 @@ export default function PlayerProfilePage() {
                 {hole_stats?.lowest_points ? hole_stats.lowest_points.value : '—'}
               </div>
               {hole_stats?.lowest_points && (
-                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_points.event_name}</div>
+                <div className="text-xs text-posgmuted truncate">{hole_stats.lowest_points.event_name}<SDTag show={hole_stats.lowest_points.scramble_drive} /></div>
               )}
             </div>
           </div>
@@ -693,7 +694,10 @@ export default function PlayerProfilePage() {
                   key={r.event_id}
                   className="border-b border-posgborder last:border-0 hover:bg-posgcardhover"
                 >
-                  <td className="px-4 py-3 text-posgtext font-medium">{r.event_name}</td>
+                  <td className="px-4 py-3 text-posgtext font-medium">
+                    {r.event_name}
+                    <SDTag show={r.scramble_drive} />
+                  </td>
                   <td className="px-4 py-3 text-right font-mono text-posgmuted">
                     {r.handicap != null ? fmtHcp(r.handicap) : '—'}
                   </td>

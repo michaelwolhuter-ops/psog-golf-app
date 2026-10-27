@@ -22,6 +22,7 @@ import {
   Sigma,
   Turtle,
 } from 'lucide-react';
+import SDTag from '@/app/SDTag';
 
 // Same categories as a player's own Round Stats section on their profile
 // page — this is the whole-field version of the exact same numbers, built
@@ -118,7 +119,10 @@ function LeaderboardCard({ label, Icon, valueClass, rows, showEvent, showDate, d
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-xs text-posgmuted w-4 shrink-0">{i + 1}</span>
                   <div className="min-w-0">
-                    <div className="text-sm text-posgtext truncate">{r.name}</div>
+                    <div className="text-sm text-posgtext truncate">
+                      {r.name}
+                      <SDTag show={r.scramble_drive} />
+                    </div>
                     {subtitle && <div className="text-[11px] text-posgmuted truncate">{subtitle}</div>}
                   </div>
                 </div>

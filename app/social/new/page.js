@@ -37,6 +37,7 @@ export default function NewSocialRoundPage() {
   const [format, setFormat] = useState('individual_stableford');
   const [selectedIds, setSelectedIds] = useState([]);
   const [teamNumbers, setTeamNumbers] = useState({}); // player_id -> 1 | 2
+  const [scrambleDrive, setScrambleDrive] = useState(false);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -94,6 +95,7 @@ export default function NewSocialRoundPage() {
         format,
         player_ids: selectedIds,
         team_numbers: isTeamFormat ? teamNumbers : {},
+        scramble_drive: scrambleDrive,
       }),
     });
     const body = await res.json();
@@ -166,6 +168,17 @@ export default function NewSocialRoundPage() {
             </label>
           ))}
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-posgtext mb-5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={scrambleDrive}
+            onChange={(e) => setScrambleDrive(e.target.checked)}
+            className="accent-fairway w-4 h-4"
+          />
+          Scramble drive
+          <span className="text-xs text-posgmuted">(tags the round "SD" on stats only)</span>
+        </label>
 
         <label className="flex items-center gap-2 text-xs text-posgmuted mb-2">
           <Users2 size={14} /> Who's playing

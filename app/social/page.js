@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Coffee, Play, ChevronRight, Trash2, BarChart3 } from 'lucide-react';
 import { useAdmin } from '@/lib/AdminContext';
 import { useConfirm } from '@/lib/useConfirm';
+import SDTag from '@/app/SDTag';
 
 const FORMAT_LABEL = {
   individual_stableford: 'Stableford',
@@ -146,7 +147,10 @@ function RoundRow({ round, isAdmin, onDelete, live = false }) {
     <div className="flex items-center gap-2 rounded-xl border border-posgborder bg-posgcard hover:border-fairway/50 transition">
       <Link href={`/scorecards/${round.scorecard_id}`} className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-posgtext truncate">{round.headline}</div>
+          <div className="font-semibold text-posgtext truncate">
+            {round.headline}
+            <SDTag show={round.scramble_drive} />
+          </div>
           <div className="text-xs text-posgmuted truncate">
             {round.date || ''}
             {round.course ? ` · ${round.course}` : ''} · {FORMAT_LABEL[round.format] || round.format}

@@ -109,7 +109,7 @@ export async function GET() {
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("id, name, event_date, status, created_at")
+    .select("id, name, event_date, status, created_at, scramble_drive")
     .eq("event_type", "once_off")
     .order("event_date", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -192,6 +192,7 @@ export async function GET() {
         date: e.event_date,
         course: sc.courses?.name || null,
         format: sc.format,
+        scramble_drive: !!e.scramble_drive,
         status: sc.status,
         players: summary.individual.map((p) => p.name),
         winner_ids: summary.winner_ids,
@@ -273,6 +274,7 @@ export async function POST(request) {
       event_date: today,
       golf_course: course.name,
       course_id: course.id,
+      scramble_drive: !!body.scramble_drive,
       status: "upcoming",
     })
     .select()

@@ -96,6 +96,9 @@ export async function GET() {
         value,
         event_name: row.event_name,
         event_date: row.event_date,
+        // Only set on single-round records (lowest/highest gross, most/
+        // lowest points) — shown as an "SD" tag, never filters anything.
+        scramble_drive: !!row.scramble_drive,
       }));
   }
 
@@ -128,6 +131,7 @@ export async function GET() {
         ...p,
         event_name: p.lowest_gross?.event_name,
         event_date: p.lowest_gross?.event_date,
+        scramble_drive: p.lowest_gross?.scramble_drive,
       })),
       (p) => p.lowest_gross?.value,
       "asc"
@@ -137,6 +141,7 @@ export async function GET() {
         ...p,
         event_name: p.highest_gross?.event_name,
         event_date: p.highest_gross?.event_date,
+        scramble_drive: p.highest_gross?.scramble_drive,
       })),
       (p) => p.highest_gross?.value,
       "desc"
@@ -146,6 +151,7 @@ export async function GET() {
         ...p,
         event_name: p.most_points?.event_name,
         event_date: p.most_points?.event_date,
+        scramble_drive: p.most_points?.scramble_drive,
       })),
       (p) => p.most_points?.value,
       "desc"
@@ -155,6 +161,7 @@ export async function GET() {
         ...p,
         event_name: p.lowest_points?.event_name,
         event_date: p.lowest_points?.event_date,
+        scramble_drive: p.lowest_points?.scramble_drive,
       })),
       (p) => p.lowest_points?.value,
       "asc",

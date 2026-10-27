@@ -84,7 +84,7 @@ export async function GET(request, { params }) {
     supabase.from("qualification_status").select("*").eq("player_id", id).single(),
     supabase
       .from("event_results")
-      .select("points, longest_drive, closest_to_pin, tutu, events(id, name, event_type, event_date, sort_order)")
+      .select("points, longest_drive, closest_to_pin, tutu, events(id, name, event_type, event_date, sort_order, scramble_drive)")
       .eq("player_id", id),
     // The handicap actually locked in on the day, per event — same value the
     // scorecard used for strokes/points at the time, not today's live
@@ -141,6 +141,7 @@ export async function GET(request, { params }) {
       event_type: r.events?.event_type,
       event_date: r.events?.event_date,
       sort_order: r.events?.sort_order,
+      scramble_drive: !!r.events?.scramble_drive,
       points: r.points,
       longest_drive: r.longest_drive,
       closest_to_pin: r.closest_to_pin,

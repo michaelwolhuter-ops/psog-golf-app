@@ -53,7 +53,16 @@ export async function PATCH(request, { params }) {
   // called after a scorecard is created/completed/reopened/deleted. Letting
   // it be PATCHed by hand again would let it drift out of sync with what
   // actually happened.
-  const allowed = ["name", "event_date", "golf_course", "format", "notes", "sort_order", "course_id"];
+  const allowed = [
+    "name",
+    "event_date",
+    "golf_course",
+    "format",
+    "notes",
+    "sort_order",
+    "course_id",
+    "scramble_drive",
+  ];
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
   }

@@ -424,6 +424,11 @@ export default function EventDetailPage() {
               >
                 {STATUS_LABEL[event.status] || event.status}
               </span>
+              {event.scramble_drive && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gold/15 text-gold border border-gold/40">
+                  Scramble Drive
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               {/* Once an event is Final Results, or once any hole has been
@@ -538,6 +543,19 @@ export default function EventDetailPage() {
               </option>
             ))}
           </select>
+          {/* Whole field plays the same, so this is per event, not per
+              scorecard. Display only: tags these rounds "SD" on stats,
+              changes nothing in scoring, results or handicaps. */}
+          <label className="flex items-center gap-2 text-sm text-posgtext mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!meta.scramble_drive}
+              onChange={(e) => setMeta({ ...meta, scramble_drive: e.target.checked })}
+              className="accent-fairway w-4 h-4"
+            />
+            Scramble drive
+            <span className="text-xs text-posgmuted">(tags rounds "SD" on stats only)</span>
+          </label>
         </div>
         <div>
           <label className="block text-xs text-posgmuted mb-1">Status</label>
